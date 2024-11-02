@@ -14,15 +14,13 @@
 
 ** About The Project
 
-This package provides automated tab group management for Emacs,
-allowing you to associate commands with specific tab groups.
-Heavily inspired by [[https://github.com/fritzgrabo/project-tab-groups][project-tab-groups.el]], this package
-generalizes the concept to arbitrary commands, providing a more
-flexible approach to organizing your Emacs workflow.
-It automatically switches to or creates tab groups when specified
-commands are invoked, streamlining navigation and buffer management.
-It also includes an optional "eye-candy" mode for enhanced tab bar
-styling.
+This package provides automated tab group management for Emacs, allowing you to associate commands with specific tab groups.
+Heavily inspired by [[https://github.com/fritzgrabo/project-tab-groups][project-tab-groups.el]], this package generalizes the concept to arbitrary commands, providing a more flexible approach to organizing your Emacs workflow.
+It automatically switches to or creates tab groups when specified commands are invoked, streamlining navigation and buffer management.
+This package has been implemented with simplicity in mind.
+It is a very thin layer that leverages Emacs' tab-bar mode for a user-defined workflow, adding very little complexity to it.
+An optional "eye-candy" mode is provided for enhanced tab bar styling.
+However, by default, any further tab-bar related configurations are handed to the user.
 
 Result with the example configuration provided below:
 
@@ -37,7 +35,7 @@ Result with the example configuration provided below:
 
 *** Installation
 
-**** Using =straight.el=
+**** Complete configuration example using =straight.el=
 
 #+begin_src emacs-lisp
   (use-package auto-tab-groups
@@ -62,7 +60,9 @@ Result with the example configuration provided below:
        ("denote"                                 . "󱓩")
        (auto-tab-groups-eyecandy-name-is-project . auto-tab-groups-eyecandy-group-icon-project)))
     :init
-    (auto-tab-groups-mode))
+    (auto-tab-groups-mode)
+    ;; Create initial tab group with name home
+    (auto-tab-groups-new-group "HOME"))
 #+end_src
 
 **** Manual Installation
@@ -71,10 +71,20 @@ Result with the example configuration provided below:
 2. Place them in your Emacs =load-path=.
 3. Add the following to your init file:
 
-   #+begin_src emacs-lisp
-(require 'auto-tab-groups)
-(auto-tab-groups-mode 1)
+            #+begin_src emacs-lisp
+  (require 'auto-tab-groups)
+  (auto-tab-groups-mode 1)
+      #+end_src
+
+If you don't want to enable the provided eye-candy mode for tab-bar styling, you might at least want to display the tab groups, by customizing =tab-bar-format=:
+
+#+begin_src emacs-lisp
+  (setq tab-bar-format '(tab-bar-format-tabs-groups
+                         ;;... additional format functions
+                         ))
 #+end_src
+
+Please refer to the documentation of =tab-bar-mode= for details.
 
 ** Customization
 
@@ -82,14 +92,17 @@ Result with the example configuration provided below:
 
 You can customize the behavior of =auto-tab-groups= using the following options:
 
-| Option                             | Type  | Description                                          |
-|------------------------------------+-------+------------------------------------------------------|
-| =auto-tab-groups-create-commands=    | alist | Commands to trigger tab group creation or switching. |
-| =auto-tab-groups-close-commands=     | alist | Commands to trigger tab group closure.               |
-| =auto-tab-groups-before-create-hook= | hook  | Hook run before tab group creation.                  |
-| =auto-tab-groups-after-create-hook=  | hook  | Hook run after tab group creation.                   |
-| =auto-tab-groups-before-delete-hook= | hook  | Hook run before tab group deletion.                  |
-| =auto-tab-groups-after-delete-hook=  | hook  | Hook run after tab group deletion.                   |
+| Option                             | Type     | Description                                          |
+|------------------------------------+----------+------------------------------------------------------|
+| =auto-tab-groups-create-commands=    | alist    | Commands to trigger tab group creation or switching. |
+| =auto-tab-groups-close-commands=     | alist    | Commands to trigger tab group closure.               |
+| =auto-tab-groups-new-choice=         | multiple | Adjust the behavior when new tab is created.         |
+| =auto-tab-groups-initial-group-name= | string   | Specify the name of the initial tab group.           |
+| =auto-tab-groups-before-create-hook= | hook     | Hook run before tab group creation.                  |
+| =auto-tab-groups-after-create-hook=  | hook     | Hook run after tab group creation.                   |
+| =auto-tab-groups-before-delete-hook= | hook     | Hook run before tab group deletion.                  |
+| =auto-tab-groups-after-delete-hook=  | hook     | Hook run after tab group deletion.                   |
+
 
 =auto-tab-groups-create-commands= and =auto-tab-groups-close-commands= are alists where:
 
@@ -107,10 +120,10 @@ It uses =project-name= if the project is defined or falls back to the directory 
 This is useful when you would like to automatically assign tab groups based on the current project like this:
 
 #+begin_src emacs-lisp
-(setq auto-tab-groups-create-commands
-      '(((project-prompt-project-dir project-switch-to-buffer) . auto-tab-groups-group-name-project)
-        ;; ... your other commands
-       ))
+  (setq auto-tab-groups-create-commands
+        '(((project-prompt-project-dir project-switch-to-buffer) . auto-tab-groups-group-name-project)
+          ;; ... your other commands
+          ))
 #+end_src
 
 *** auto-tab-groups-eyecandy
@@ -138,10 +151,10 @@ This package provides helper functions to integrate with =project.el=:
 You can use these in =auto-tab-groups-eyecandy-icons= like this:
 
 #+begin_src emacs-lisp
-(setq auto-tab-groups-eyecandy-icons
-      '((auto-tab-groups-eyecandy-name-is-project . auto-tab-groups-eyecandy-group-icon-project)
-       ;; ... your other icons
-        ))
+  (setq auto-tab-groups-eyecandy-icons
+        '((auto-tab-groups-eyecandy-name-is-project . auto-tab-groups-eyecandy-group-icon-project)
+          ;; ... your other icons
+          ))
 #+end_src
 
 ** Contributing
