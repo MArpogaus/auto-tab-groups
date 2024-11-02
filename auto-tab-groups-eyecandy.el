@@ -15,7 +15,6 @@
 
 ;;; Code:
 (require 'tab-bar)
-(require 'project)
 
 (defgroup auto-tab-groups-eyecandy ()
   "Modern tab bar."
@@ -38,7 +37,8 @@ Each element is a cons cell:
   :type 'string)
 
 (defun auto-tab-groups-eyecandy--get-bar-image (height width color)
-  "Generate a rectangular bar image with HEIGHT, WIDTH, and COLOR."
+  "Generate a rectangular bar image with HEIGHT, WIDTH, and COLOR.
+Thanks to doom-modeline for the idea: https://github.com/seagle0128/doom-modeline/blob/ec6bc00ac035e75ad10b52e516ea5d95cc9e0bd9/doom-modeline-core.el#L1454C8-L1454C39"
   (if (and (image-type-available-p 'pbm) (display-graphic-p))
       (propertize
        " " 'display
@@ -61,9 +61,10 @@ Each element is a cons cell:
         tab-group-icon-or-func)
     auto-tab-groups-eyecandy-default-icon))
 
-(defun auto-tab-groups-eyecandy--tab-bar-tab-group-format-function (tab i &optional current-p)
+(defun auto-tab-groups-eyecandy--tab-bar-tab-group-format-function (tab _ &optional current-p)
   "Format the tab group name for TAB-BAR.
-TAB is the tab object, I is the tab index, and CURRENT-P indicates if the tab is selected."
+TAB is the tab object, I is the tab index,
+ and CURRENT-P indicates if the tab is selected."
   (let* ((tab-group-name (funcall tab-bar-tab-group-function tab))
          (tab-group-face (if current-p 'tab-bar-tab-group-current 'tab-bar-tab-group-inactive))
          (color (face-foreground (if current-p 'mode-line-emphasis 'shadow)))
@@ -139,8 +140,7 @@ TAB is the tab object and I is the tab index."
 (defun auto-tab-groups-eyecandy-name-is-project (tab-group-name)
   "Return whether the specified TAB-GROUP-NAME corresponds to a project."
   (seq-find (lambda (dir)
-              (when-let ((proj (project--find-in-directory dir))
-                         (name (project-name proj)))
+              (when-let ((name (file-name-nondirectory (directory-file-name dir))))
                 (equal name tab-group-name)))
             (project-known-project-roots)))
 
