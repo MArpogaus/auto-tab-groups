@@ -224,14 +224,15 @@ Use `project-name' if possible, otherwise fallback to the directory name."
   "Create a new tab group with the name TAB-GROUP-NAME."
   (interactive (list(read-shell-command "Group Name: ")))
   (run-hooks 'auto-tab-groups-before-create-hook)
-  (if (eq auto-tab-groups-new-choice 'group-scratch)
-      (setq-local tab-bar-new-tab-choice (format "*%s-scratch*" tab-group-name))
-    (setq-local tab-bar-new-tab-choice auto-tab-groups-new-choice))
-  (tab-bar-new-tab)
-  ;; HACK: When a new tab is created the previews buffers list seams to stay untouched,
-  ;;       so we set it to nil here
-  (when (stringp tab-bar-new-tab-choice)
-    (set-window-prev-buffers (get-buffer-window) nil))
+  (let ((tab-choice (if (eq auto-tab-groups-new-choice 'group-scratch)
+                        (format "*%s-scratch*" tab-group-name)
+                      auto-tab-groups-new-choice)))
+    (setq-local tab-bar-new-tab-choice tab-choice)
+    (tab-bar-new-tab)
+    ;; HACK: When a new tab is created the previews buffers list seams to stay untouched,
+    ;;       so we set it to nil here
+    (when (stringp tab-choice)
+      (set-window-prev-buffers (get-buffer-window) nil)))
   (tab-bar-change-tab-group tab-group-name)
   (when auto-tab-groups-echo-mode
     (message "Created new tab group: %s" tab-group-name))
