@@ -40,6 +40,11 @@ Each element should be a cons cell:
   :type '(alist :key-type (choice symbol (repeat symbol))
                 :value-type (choice string function)))
 
+(defcustom auto-tab-groups-new-choice 'group-scratch
+  "Adjust the behavior when new tab is created.
+Refer to `tab-bar-new-tab-choice' for details."
+  :type 'string)
+
 (defcustom auto-tab-groups-before-create-hook nil
   "Hook run before a tab group is created."
   :type 'hook)
@@ -84,14 +89,6 @@ Each element should be a cons cell:
          (tab-group-name-or-func (cdr group-data)))
     (functionp tab-group-name-or-func)))
 
-(defun auto-tab-groups--create-tab-group (tab-group-name)
-  "Create a new tab group with the name TAB-GROUP-NAME."
-  (run-hooks 'auto-tab-groups-before-create-hook)
-  (tab-bar-new-tab)
-  (tab-bar-change-tab-group tab-group-name)
-  (when auto-tab-groups-echo-mode
-    (message "Created new tab group: %s" tab-group-name))
-  (run-hooks 'auto-tab-groups-after-create-hook))
 
 (defun auto-tab-groups--switch-tab-group (tab-group-name)
   "Switch to the tab group with the name TAB-GROUP-NAME."
@@ -109,7 +106,7 @@ Each element should be a cons cell:
   "Switch to or create a tab group with the name TAB-GROUP-NAME."
   (if-let ((existing-tab (auto-tab-groups--find-tab-by-group-name tab-group-name)))
       (auto-tab-groups--switch-tab-group existing-tab)
-    (auto-tab-groups--create-tab-group tab-group-name)))
+    (auto-tab-groups-new-group tab-group-name)))
 
 (defun auto-tab-groups--close-tab-group (tab-group-name)
   "Close the tab group with the name TAB-GROUP-NAME."
@@ -171,6 +168,11 @@ Call ORIG-FUN with ARGS and then manage tab groups."
                        (list (car command-data))))
       (advice-remove command #'auto-tab-groups--close-advice))))
 
+(defun auto-tab-groups-new-group--tab-bar-format-new ()
+  "Button to add a new tab and assign it to a new group."
+  `((add-tab menu-item ,tab-bar-new-button auto-tab-groups-new-group
+             :help "New")))
+
 ;;;###autoload
 (define-minor-mode auto-tab-groups-mode
   "Toggle automatic tab group management based on command execution."
@@ -194,6 +196,23 @@ Use `project-name' if possible, otherwise fallback to the directory name."
         (file-name-nondirectory (directory-file-name dir)))
     (when-let ((project (project-current nil)))
       (project-name project))))
+
+(defun auto-tab-groups-new-group (tab-group-name)
+  "Create a new tab group with the name TAB-GROUP-NAME."
+  (interactive (list(read-shell-command "Group Name: ")))
+  (run-hooks 'auto-tab-groups-before-create-hook)
+  (if (eq auto-tab-groups-new-choice 'group-scratch)
+      (setq-local tab-bar-new-tab-choice (format "*%s-scratch*" tab-group-name))
+    (setq-local tab-bar-new-tab-choice auto-tab-groups-new-choice))
+  (tab-bar-new-tab)
+  ;; HACK: When a new tab is created the previews buffers list seams to stay untouched,
+  ;;       so we set it to nil here
+  (when (stringp tab-bar-new-tab-choice)
+    (set-window-prev-buffers (get-buffer-window) nil))
+  (tab-bar-change-tab-group tab-group-name)
+  (when auto-tab-groups-echo-mode
+    (message "Created new tab group: %s" tab-group-name))
+  (run-hooks 'auto-tab-groups-after-create-hook))
 
 (provide 'auto-tab-groups)
 ;;; auto-tab-groups.el ends here
