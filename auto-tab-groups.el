@@ -89,13 +89,15 @@ Each element should be a cons cell:
   (run-hooks 'auto-tab-groups-before-create-hook)
   (tab-bar-new-tab)
   (tab-bar-change-tab-group tab-group-name)
-  (message "Created new tab group: %s" tab-group-name)
+  (when auto-tab-groups-echo-mode
+    (message "Created new tab group: %s" tab-group-name))
   (run-hooks 'auto-tab-groups-after-create-hook))
 
 (defun auto-tab-groups--switch-tab-group (tab-group-name)
   "Switch to the tab group with the name TAB-GROUP-NAME."
   (tab-bar-select-tab (1+ (tab-bar--tab-index tab-group-name)))
-  (message "Switched to tab group: %s" tab-group-name))
+  (when auto-tab-groups-echo-mode
+    (message "Switched to tab group: %s" tab-group-name)))
 
 (defun auto-tab-groups--tab-group-exists (command command-alist)
   "Check if a tab group for COMMAND in COMMAND-ALIST exists, and return its name."
@@ -114,6 +116,8 @@ Each element should be a cons cell:
   (run-hooks 'auto-tab-groups-before-delete-hook)
   (when-let ((tab (auto-tab-groups--find-tab-by-group-name tab-group-name)))
     (tab-bar-close-group-tabs tab-group-name))
+  (when auto-tab-groups-echo-mode
+    (message "Closing tab group: %s" tab-group-name))
   (run-hooks 'auto-tab-groups-after-delete-hook))
 
 (defun auto-tab-groups--get-command-name (orig-fun)
@@ -175,6 +179,11 @@ Call ORIG-FUN with ARGS and then manage tab groups."
   (if auto-tab-groups-mode
       (auto-tab-groups--setup)
     (auto-tab-groups--teardown)))
+
+(define-minor-mode auto-tab-groups-echo-mode
+  "Print the name in the echo area, when creating or switching tab groups."
+  :global t
+  :group 'auto-tab-groups)
 
 (defun auto-tab-groups-group-name-project (&optional dir)
   "Return the tab group name for the project in DIR.
