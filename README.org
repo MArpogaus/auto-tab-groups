@@ -60,9 +60,7 @@ Result with the example configuration provided below:
        ("denote"                                 . "󱓩")
        (auto-tab-groups-eyecandy-name-is-project . auto-tab-groups-eyecandy-group-icon-project)))
     :init
-    (auto-tab-groups-mode)
-    ;; Create initial tab group with name home
-    (auto-tab-groups-new-group "HOME"))
+    (auto-tab-groups-mode))
 #+end_src
 
 **** Manual Installation
