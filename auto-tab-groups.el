@@ -40,6 +40,10 @@ Each element should be a cons cell:
   :type '(alist :key-type (choice symbol (repeat symbol))
                 :value-type (choice string function)))
 
+(defcustom auto-tab-groups-initial-group-name "HOME"
+  "Define the name of the tab group created in new frames"
+  :type 'string)
+
 (defcustom auto-tab-groups-new-choice 'group-scratch
   "Adjust the behavior when new tab is created.
 Refer to `tab-bar-new-tab-choice' for details."
@@ -150,6 +154,17 @@ Call ORIG-FUN with ARGS and then manage tab groups."
     (apply orig-fun args)
     (auto-tab-groups--close-tab-group tab-group-name)))
 
+(defun auto-tab-groups-new-group--tab-bar-format-new ()
+  "Button to add a new tab and assign it to a new group."
+  `((add-tab menu-item ,tab-bar-new-button auto-tab-groups-new-group
+             :help "New")))
+
+(defun auto-tab-groups--after-make-frame-function (&optional frame)
+  "Initialize new group or clone existing one when new FRAME is created."
+  (let ((tab-group-name (funcall tab-bar-tab-group-function (tab-bar--current-tab))))
+    (when frame (select-frame frame))
+    (tab-group (if tab-group-name tab-group-name auto-tab-groups-initial-group-name))))
+
 (defun auto-tab-groups--setup ()
   "Setup advice for commands specified in the configuration."
   (dolist (command-data auto-tab-groups-create-commands)
@@ -161,7 +176,11 @@ Call ORIG-FUN with ARGS and then manage tab groups."
     (dolist (command (if (listp (car command-data))
                          (car command-data)
                        (list (car command-data))))
-      (advice-add command :around #'auto-tab-groups--close-advice))))
+      (advice-add command :around #'auto-tab-groups--close-advice)))
+  ;; Create initial tab group
+  (when auto-tab-groups-initial-group-name
+    (auto-tab-groups--after-make-frame-function)
+    (add-hook 'after-make-frame-functions 'auto-tab-groups--after-make-frame-function)))
 
 (defun auto-tab-groups--teardown ()
   "Remove advice from commands specified in the configuration."
@@ -174,12 +193,8 @@ Call ORIG-FUN with ARGS and then manage tab groups."
     (dolist (command (if (listp (car command-data))
                          (car command-data)
                        (list (car command-data))))
-      (advice-remove command #'auto-tab-groups--close-advice))))
-
-(defun auto-tab-groups-new-group--tab-bar-format-new ()
-  "Button to add a new tab and assign it to a new group."
-  `((add-tab menu-item ,tab-bar-new-button auto-tab-groups-new-group
-             :help "New")))
+      (advice-remove command #'auto-tab-groups--close-advice)))
+  (remove-hook 'after-make-frame-functions 'auto-tab-groups--after-make-frame-function))
 
 ;;;###autoload
 (define-minor-mode auto-tab-groups-mode
