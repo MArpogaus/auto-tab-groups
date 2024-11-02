@@ -43,7 +43,15 @@ Each element should be a cons cell:
 (defcustom auto-tab-groups-new-choice 'group-scratch
   "Adjust the behavior when new tab is created.
 Refer to `tab-bar-new-tab-choice' for details."
-  :type 'string)
+  :type '(choice (const     :tag "Current buffer" t)
+                 (const     :tag "Current window" window)
+                 (const     :tag "Group scratch buffer" group-scratch)
+                 (string    :tag "Buffer" "*scratch*")
+                 (directory :tag "Directory" :value "~/")
+                 (file      :tag "File" :value "~/.emacs")
+                 (function  :tag "Function")
+                 (const     :tag "Duplicate tab" clone)))
+
 
 (defcustom auto-tab-groups-before-create-hook nil
   "Hook run before a tab group is created."
