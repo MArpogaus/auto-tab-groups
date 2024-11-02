@@ -106,7 +106,7 @@ TAB is the tab object and I is the tab index."
           tab-bar-close-button (propertize (icon-string 'auto-tab-groups-eyecandy--tab-bar-close)
                                            'close-tab t)))
   (setq tab-bar-format '(tab-bar-format-tabs-groups
-                         tab-bar-format-new
+                         auto-tab-groups-new-group--tab-bar-format-new
                          tab-bar-format-align-right
                          tab-bar-format-global
                          tab-bar-format-menu-bar)
