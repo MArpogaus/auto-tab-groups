@@ -44,7 +44,7 @@ Thanks to doom-modeline for the idea: https://github.com/seagle0128/doom-modelin
        " " 'display
        (create-image
         (concat (format "P1\n%i %i\n" width height) (make-string (* width height) ?1) "\n")
-        'pbm t :scale 1 :foreground color :ascent 'center))
+        'pbm t :foreground color :ascent 'center))
     (propertize "|" 'face (list :foreground color :background color))))
 
 (defun auto-tab-groups-eyecandy--get-group-icon (tab-group-name)
