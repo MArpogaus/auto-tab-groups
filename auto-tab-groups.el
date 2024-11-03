@@ -165,6 +165,19 @@ Call ORIG-FUN with ARGS and then manage tab groups."
     (when frame (select-frame frame))
     (tab-group (if tab-group-name tab-group-name auto-tab-groups-initial-group-name))))
 
+(defun auto-tab-groups--get-new-tab-choice (tab-group-name)
+  "Get value for `tab-bar-new-tab-choice' for TAB-GROUP-NAME."
+  (if (eq auto-tab-groups-new-choice 'group-scratch)
+      (format "*%s-scratch*" tab-group-name)
+    auto-tab-groups-new-choice))
+
+(defun auto-tab-groups--cleanup-before-close-advice (tab-group-name)
+  "Advice `tab-bar-close-group-tabs' to kill group scratch buffer before TAB-GROUP-NAME is closed."
+  (when (eq auto-tab-groups-new-choice 'group-scratch)
+    (if-let* ((tab-group-scratch-buffer-name (auto-tab-groups--get-new-tab-choice tab-group-name))
+              (tab-group-scratch-buffer (get-buffer tab-group-scratch-buffer-name)))
+        (kill-buffer tab-group-scratch-buffer))))
+
 (defun auto-tab-groups--setup ()
   "Setup advice for commands specified in the configuration."
   (dolist (command-data auto-tab-groups-create-commands)
@@ -180,7 +193,8 @@ Call ORIG-FUN with ARGS and then manage tab groups."
   ;; Create initial tab group
   (when auto-tab-groups-initial-group-name
     (auto-tab-groups--after-make-frame-function)
-    (add-hook 'after-make-frame-functions 'auto-tab-groups--after-make-frame-function)))
+    (add-hook 'after-make-frame-functions 'auto-tab-groups--after-make-frame-function))
+  (advice-add #'tab-bar-close-group-tabs :before #'auto-tab-groups--cleanup-before-close-advice))
 
 (defun auto-tab-groups--teardown ()
   "Remove advice from commands specified in the configuration."
@@ -194,7 +208,9 @@ Call ORIG-FUN with ARGS and then manage tab groups."
                          (car command-data)
                        (list (car command-data))))
       (advice-remove command #'auto-tab-groups--close-advice)))
-  (remove-hook 'after-make-frame-functions 'auto-tab-groups--after-make-frame-function))
+  (remove-hook 'after-make-frame-functions 'auto-tab-groups--after-make-frame-function)
+  (advice-remove #'tab-bar-close-group-tabs #'auto-tab-groups--cleanup-before-close-advice))
+
 
 ;;;###autoload
 (define-minor-mode auto-tab-groups-mode
@@ -224,14 +240,12 @@ Use `project-name' if possible, otherwise fallback to the directory name."
   "Create a new tab group with the name TAB-GROUP-NAME."
   (interactive (list(read-shell-command "Group Name: ")))
   (run-hooks 'auto-tab-groups-before-create-hook)
-  (let ((tab-choice (if (eq auto-tab-groups-new-choice 'group-scratch)
-                        (format "*%s-scratch*" tab-group-name)
-                      auto-tab-groups-new-choice)))
-    (setq-local tab-bar-new-tab-choice tab-choice)
+  (let* ((tab-bar-new-tab-choice (auto-tab-groups--get-new-tab-choice tab-group-name))
+         (choice-is-buffer-name (stringp tab-bar-new-tab-choice)))
     (tab-bar-new-tab)
     ;; HACK: When a new tab is created the previews buffers list seams to stay untouched,
     ;;       so we set it to nil here
-    (when (stringp tab-choice)
+    (when choice-is-buffer-name
       (set-window-prev-buffers (get-buffer-window) nil)))
   (tab-bar-change-tab-group tab-group-name)
   (when auto-tab-groups-echo-mode
