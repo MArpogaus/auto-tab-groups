@@ -20,7 +20,7 @@
   "Modern tab bar."
   :group 'auto-tab-groups)
 
-(defcustom auto-tab-groups-eyecandy-icons '(("HOME" . ""))
+(defcustom auto-tab-groups-eyecandy-icons '(("HOME" . '(:style "suc" :icon "custom-emacs")))
   "Alist mapping commands to corresponding tab group names/functions.
 Each element is a cons cell:
   - CAR: Command (symbol) or list of commands.
@@ -32,13 +32,15 @@ Each element is a cons cell:
   "Height of the tab bar tabs in pixels."
   :type 'number)
 
-(defcustom auto-tab-groups-eyecandy-default-icon ""
+(defcustom auto-tab-groups-eyecandy-default-icon '(:style "oct" :icon "dot_fill")
   "Default icon displayed for tab groups."
   :type 'string)
 
 (defun auto-tab-groups-eyecandy--get-bar-image (height width color)
   "Generate a rectangular bar image with HEIGHT, WIDTH, and COLOR.
-Thanks to doom-modeline for the idea: https://github.com/seagle0128/doom-modeline/blob/ec6bc00ac035e75ad10b52e516ea5d95cc9e0bd9/doom-modeline-core.el#L1454C8-L1454C39"
+
+Thanks to doom-modeline for the idea:
+https://github.com/seagle0128/doom-modeline/blob/ec6bc00ac035e75ad10b52e516ea5d95cc9e0bd9/doom-modeline-core.el#L1454C8-L1454C39"
   (if (and (image-type-available-p 'pbm) (display-graphic-p))
       (propertize
        " " 'display
@@ -46,6 +48,18 @@ Thanks to doom-modeline for the idea: https://github.com/seagle0128/doom-modelin
         (concat (format "P1\n%i %i\n" width height) (make-string (* width height) ?1) "\n")
         'pbm t :foreground color :ascent 'center))
     (propertize "|" 'face (list :foreground color :background color))))
+
+(defun auto-tab-groups-eyecandy--nerd-icon (icon-spec)
+  "Return the nerd icon glyph for ICON-SPEC.
+
+Inspired from nerd-icons-corfu: https://github.com/LuigiPiucco/nerd-icons-corfu/blob/721830b42b35e326a88b338fc53e4752f333fad2/nerd-icons-corfu.el#L113"
+  (let* ((style (plist-get icon-spec :style))
+         (icon (plist-get icon-spec :icon))
+         (icon-fun (intern (concat "nerd-icons-" style "icon")))
+         (icon-name (if (equal style "suc")
+                        (concat "nf-" icon)
+                        (concat "nf-"  style "-" icon))))
+    (or (and (fboundp icon-fun) (funcall icon-fun icon-name)) "?")))
 
 (defun auto-tab-groups-eyecandy--get-group-icon (tab-group-name)
   "Retrieve the icon for the given TAB-GROUP-NAME."
@@ -55,11 +69,12 @@ Thanks to doom-modeline for the idea: https://github.com/seagle0128/doom-modelin
                                (if (functionp tab-group-name-or-func)
                                    (funcall tab-group-name-or-func tab-group-name)
                                  (equal tab-group-name tab-group-name-or-func))))
-                           auto-tab-groups-eyecandy-icons))))
-      (if (functionp tab-group-icon-or-func)
-          (funcall tab-group-icon-or-func tab-group-name)
-        tab-group-icon-or-func)
-    auto-tab-groups-eyecandy-default-icon))
+                           auto-tab-groups-eyecandy-icons)))
+           (icon-spec (if (functionp tab-group-icon-or-func)
+                           (funcall tab-group-icon-or-func tab-group-name)
+                         tab-group-icon-or-func)))
+      (if (listp icon-spec) (auto-tab-groups-eyecandy--nerd-icon icon-spec) icon-spec)
+    (auto-tab-groups-eyecandy--nerd-icon auto-tab-groups-eyecandy-default-icon)))
 
 (defun auto-tab-groups-eyecandy--tab-bar-tab-group-format-function (tab _ &optional current-p)
   "Format the tab group name for TAB-BAR.
