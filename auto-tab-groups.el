@@ -25,37 +25,69 @@
   :group 'project)
 
 (defcustom auto-tab-groups-create-commands nil
-  "Alist mapping commands to tab group names/functions for creation.
+  "Alist mapping commands to tab group specifications for creation.
+
 Each element should be a cons cell:
-  - CAR: A command (symbol) or list of commands.
-  - CDR: A string (group name) or a function that returns a string."
+- CAR:  Command (symbol) or list of commands.
+- CDR:  Group specification, which can be:
+  - A string:  Name of the tab group.
+  - A function:  Called to dynamically determine the group name. Its result should be a string.
+                If `:ignore-result' is nil, the command's result will be passed as argument to
+                this function. Otherwise the command is called first, the result passed to the
+                function, and then the tab group is created.
+  - A plist:  Provides additional options. Currently supported properties:
+    - `:tab-group-name': Group name (string) or a function returning a string.
+    - `:ignore-result':  If non-nil and value is a function, command's result is passed to the function.
+                         If nil, the tab group is created before the command is run.
+
+Example:
+
+ '(((project-prompt-project-dir project-switch-to-buffer) . auto-tab-groups-group-name-project)
+   (my-open-command1 \"my-group\" :ignore-result t)
+   ((my-open-command2 my-open-command3) :tab-group-name \"my-group2\" :ignore-result t)
+   ((dirvish dirvish-fd) :tab-group-name \"dirvish\"))"
+
   :type '(alist :key-type (choice symbol (repeat symbol))
-                :value-type (choice string function)))
+                :value-type (choice string function (plist :key-type symbol
+                                                           :value-type (choice string function boolean)))))
 
 (defcustom auto-tab-groups-close-commands nil
-  "Alist mapping commands to tab group names/functions for closure.
-Each element should be a cons cell:
-  - CAR: A command (symbol) or list of commands.
-  - CDR: A string (group name) or a function that returns a string."
+  "Alist mapping commands to tab group specifications for closure.
+
+  Each element should be a cons cell:
+  - CAR: Command (symbol) or list of commands.
+  - CDR: Group specification, which can be:
+  - A string:  Name of the tab group.
+  - A function:  Called to determine the tab group name. Its result should be a string.
+  - A plist: Provides additional options. Currently supported properties:
+    - `:tab-group-name': Group name (string) or a function returning a string.
+    - `:ignore-result':  If non-nil, the tab group will be closed regardless of the command's result.
+                         If nil, the group is only closed if the command returns non-nil.
+
+  Example:
+
+  '((project-kill-buffers . auto-tab-groups-group-name-project)
+    (my-close-command :tab-group-name \"my-group2\" :ignore-result t)
+    (dirvish-quit \"dirvish\" :ignore-result t))"
   :type '(alist :key-type (choice symbol (repeat symbol))
-                :value-type (choice string function)))
+                :value-type (choice string function (plist :key-type symbol
+                                                           :value-type (choice string function boolean)))))
 
 (defcustom auto-tab-groups-initial-group-name "HOME"
-  "Define the name of the tab group created in new frames"
+  "Define the name of the tab group created in new frames."
   :type 'string)
 
 (defcustom auto-tab-groups-new-choice 'group-scratch
-  "Adjust the behavior when new tab is created.
+  "Adjust the behavior when a new tab is created.
 Refer to `tab-bar-new-tab-choice' for details."
-  :type '(choice (const     :tag "Current buffer" t)
-                 (const     :tag "Current window" window)
-                 (const     :tag "Group scratch buffer" group-scratch)
-                 (string    :tag "Buffer" "*scratch*")
+  :type '(choice (const :tag "Current buffer" t)
+                 (const :tag "Current window" window)
+                 (const :tag "Group scratch buffer" group-scratch)
+                 (string :tag "Buffer" "*scratch*")
                  (directory :tag "Directory" :value "~/")
-                 (file      :tag "File" :value "~/.emacs")
+                 (file :tag "File" :value "~/.emacs")
                  (function  :tag "Function")
-                 (const     :tag "Duplicate tab" clone)))
-
+                 (const :tag "Duplicate tab" clone)))
 
 (defcustom auto-tab-groups-before-create-hook nil
   "Hook run before a tab group is created."
@@ -78,41 +110,26 @@ Refer to `tab-bar-new-tab-choice' for details."
   (seq-find (lambda (tab) (equal tab-group-name (alist-get 'group tab)))
             (funcall tab-bar-tabs-function)))
 
-(defun auto-tab-groups--get-group-name (command command-alist &optional results)
-  "Get the tab group name for COMMAND from COMMAND-ALIST."
+(defun auto-tab-groups--get-group-spec (command command-alist)
+  "Return the group specification (plist) for COMMAND in COMMAND-ALIST.
+
+  The plist contains:
+  `:tab-group-name' - The group name (string or function).
+  `:ignore-result' - Whether to ignore the command's result (boolean)."
   (let* ((group-data (seq-find (lambda (data)
                                  (if (listp (car data))
                                      (memq command (car data))
                                    (equal command (car data))))
                                command-alist))
-         (tab-group-name-or-func (cdr group-data))
-         (tab-group-name (if (functionp tab-group-name-or-func)
-                             (funcall tab-group-name-or-func results)
-                           tab-group-name-or-func)))
-    tab-group-name))
-
-(defun auto-tab-groups--dynamic-group-name-p (command command-alist)
-  "Return non-nil if the group name for COMMAND in COMMAND-ALIST is dynamic."
-  (let* ((group-data (seq-find (lambda (data)
-                                 (if (listp (car data))
-                                     (memq command (car data))
-                                   (equal command (car data))))
-                               command-alist))
-         (tab-group-name-or-func (cdr group-data)))
-    (functionp tab-group-name-or-func)))
-
+         (groups-spec (cdr group-data)))
+    (if (nlistp groups-spec) (list :tab-group-name groups-spec)
+      (plist-put (cdr groups-spec) :tab-group-name (car groups-spec)))))
 
 (defun auto-tab-groups--switch-tab-group (tab-group-name)
   "Switch to the tab group with the name TAB-GROUP-NAME."
   (tab-bar-select-tab (1+ (tab-bar--tab-index tab-group-name)))
   (when auto-tab-groups-echo-mode
     (message "Switched to tab group: %s" tab-group-name)))
-
-(defun auto-tab-groups--tab-group-exists (command command-alist)
-  "Check if a tab group for COMMAND in COMMAND-ALIST exists, and return its name."
-  (when-let* ((tab-group-name (auto-tab-groups--get-group-name command command-alist))
-              (tab (auto-tab-groups--find-tab-by-group-name tab-group-name)))
-    tab-group-name))
 
 (defun auto-tab-groups--switch-or-create-tab-group (tab-group-name)
   "Switch to or create a tab group with the name TAB-GROUP-NAME."
@@ -126,7 +143,7 @@ Refer to `tab-bar-new-tab-choice' for details."
   (when-let ((tab (auto-tab-groups--find-tab-by-group-name tab-group-name)))
     (tab-bar-close-group-tabs tab-group-name))
   (when auto-tab-groups-echo-mode
-    (message "Closing tab group: %s" tab-group-name))
+    (message "Closed tab group: %s" tab-group-name))
   (run-hooks 'auto-tab-groups-after-delete-hook))
 
 (defun auto-tab-groups--get-command-name (orig-fun)
@@ -135,24 +152,35 @@ Refer to `tab-bar-new-tab-choice' for details."
 
 (defun auto-tab-groups--create-advice (orig-fun &rest args)
   "Advice function to handle tab group creation based on command.
-Call ORIG-FUN with ARGS and manage tab groups."
-  (let ((command-name (auto-tab-groups--get-command-name orig-fun)))
-    (if (auto-tab-groups--dynamic-group-name-p command-name auto-tab-groups-create-commands)
-        (let* ((results (apply orig-fun args))
-               (tab-group-name (auto-tab-groups--get-group-name command-name auto-tab-groups-create-commands results)))
+
+  Call ORIG-FUN with ARGS and manage tab groups."
+  (let* ((command-name (auto-tab-groups--get-command-name orig-fun))
+         (tab-group-spec (auto-tab-groups--get-group-spec command-name auto-tab-groups-create-commands))
+         (tab-group-name-or-func (plist-get tab-group-spec :tab-group-name))
+         (tab-group-name-functionp (functionp tab-group-name-or-func))
+         (ignore-result (plist-get tab-group-spec :ignore-result)))
+    (if (or (not tab-group-name-functionp) ignore-result)
+        (let ((tab-group-name (if tab-group-name-functionp (funcall tab-group-name-or-func) tab-group-name-or-func)))
           (auto-tab-groups--switch-or-create-tab-group tab-group-name)
-          results)
-      (when-let ((tab-group-name (auto-tab-groups--get-group-name command-name auto-tab-groups-create-commands)))
-        (auto-tab-groups--switch-or-create-tab-group tab-group-name))
-      (apply orig-fun args))))
+          (apply orig-fun args))
+      (let* ((results (apply orig-fun args))
+             (tab-group-name (if tab-group-name-functionp (funcall tab-group-name-or-func results) tab-group-name-or-func)))
+        (auto-tab-groups--switch-or-create-tab-group tab-group-name)
+        results))))
 
 (defun auto-tab-groups--close-advice (orig-fun &rest args)
   "Advice function to handle tab group deletion based on command.
-Call ORIG-FUN with ARGS and then manage tab groups."
+
+  Call ORIG-FUN with ARGS and then manage tab groups."
   (let* ((command-name (auto-tab-groups--get-command-name orig-fun))
-         (tab-group-name (auto-tab-groups--get-group-name command-name auto-tab-groups-close-commands)))
-    (apply orig-fun args)
-    (auto-tab-groups--close-tab-group tab-group-name)))
+         (tab-group-spec (auto-tab-groups--get-group-spec command-name auto-tab-groups-close-commands))
+         (tab-group-name-or-func (plist-get tab-group-spec :tab-group-name))
+         (ignore-result (plist-get tab-group-spec :ignore-result))
+         (tab-group-name (if (functionp tab-group-name-or-func)
+                             (funcall tab-group-name-or-func)
+                           tab-group-name-or-func)))
+    (when (or ignore-result (apply orig-fun args))
+      (auto-tab-groups--close-tab-group tab-group-name))))
 
 (defun auto-tab-groups-new-group--tab-bar-format-new ()
   "Button to add a new tab and assign it to a new group."
@@ -193,8 +221,8 @@ Call ORIG-FUN with ARGS and then manage tab groups."
   ;; Create initial tab group
   (when auto-tab-groups-initial-group-name
     (auto-tab-groups--after-make-frame-function)
-    (add-hook 'after-make-frame-functions 'auto-tab-groups--after-make-frame-function))
-  (advice-add #'tab-bar-close-group-tabs :before #'auto-tab-groups--cleanup-before-close-advice))
+    (add-hook 'after-make-frame-functions #'auto-tab-groups--after-make-frame-function))
+  (advice-add 'tab-bar-close-group-tabs :before #'auto-tab-groups--cleanup-before-close-advice))
 
 (defun auto-tab-groups--teardown ()
   "Remove advice from commands specified in the configuration."
@@ -208,9 +236,8 @@ Call ORIG-FUN with ARGS and then manage tab groups."
                          (car command-data)
                        (list (car command-data))))
       (advice-remove command #'auto-tab-groups--close-advice)))
-  (remove-hook 'after-make-frame-functions 'auto-tab-groups--after-make-frame-function)
-  (advice-remove #'tab-bar-close-group-tabs #'auto-tab-groups--cleanup-before-close-advice))
-
+  (remove-hook 'after-make-frame-functions #'auto-tab-groups--after-make-frame-function)
+  (advice-remove 'tab-bar-close-group-tabs #'auto-tab-groups--cleanup-before-close-advice))
 
 ;;;###autoload
 (define-minor-mode auto-tab-groups-mode
@@ -222,30 +249,29 @@ Call ORIG-FUN with ARGS and then manage tab groups."
     (auto-tab-groups--teardown)))
 
 (define-minor-mode auto-tab-groups-echo-mode
-  "Print the name in the echo area, when creating or switching tab groups."
+  "Print messages in the echo area when creating or switching tab groups."
   :global t
   :group 'auto-tab-groups)
 
 (defun auto-tab-groups-group-name-project (&optional dir)
   "Return the tab group name for the project in DIR.
-Use `project-name' if possible, otherwise fallback to the directory name."
-  (if (stringp dir)
-      (if-let ((project (project-current nil dir)))
-          (project-name project)
-        (file-name-nondirectory (directory-file-name dir)))
-    (when-let ((project (project-current nil)))
-      (project-name project))))
+
+  Uses `project-name' if possible, otherwise falls back to the directory name."
+  (if-let ((project (if (and dir (stringp dir)) (project-current nil dir) (project-current nil))))
+      (project-name project)
+    (file-name-nondirectory (directory-file-name (or dir default-directory)))))
+
 
 (defun auto-tab-groups-new-group (tab-group-name)
   "Create a new tab group with the name TAB-GROUP-NAME."
-  (interactive (list(read-shell-command "Group Name: ")))
+  (interactive (list (read-shell-command "Group Name: ")))
   (run-hooks 'auto-tab-groups-before-create-hook)
   (let* ((tab-bar-new-tab-choice (auto-tab-groups--get-new-tab-choice tab-group-name))
-         (choice-is-buffer-name (stringp tab-bar-new-tab-choice)))
+         (choice-buffer-name-p (stringp tab-bar-new-tab-choice)))
     (tab-bar-new-tab)
-    ;; HACK: When a new tab is created the previews buffers list seams to stay untouched,
-    ;;       so we set it to nil here
-    (when choice-is-buffer-name
+    ;; HACK: When a new tab is created the previous buffers list seems to stay untouched,
+    ;;       so we set it to nil here.
+    (when choice-buffer-name-p
       (set-window-prev-buffers (get-buffer-window) nil)))
   (tab-bar-change-tab-group tab-group-name)
   (when auto-tab-groups-echo-mode
