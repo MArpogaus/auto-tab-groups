@@ -77,12 +77,11 @@ Example:
   "Define the name of the tab group created in new frames."
   :type 'string)
 
-(defcustom auto-tab-groups-new-choice 'group-scratch
+(defcustom auto-tab-groups-new-choice "*scratch*"
   "Adjust the behavior when a new tab is created.
 Refer to `tab-bar-new-tab-choice' for details."
   :type '(choice (const :tag "Current buffer" t)
                  (const :tag "Current window" window)
-                 (const :tag "Group scratch buffer" group-scratch)
                  (string :tag "Buffer" "*scratch*")
                  (directory :tag "Directory" :value "~/")
                  (file :tag "File" :value "~/.emacs")
@@ -193,19 +192,6 @@ Refer to `tab-bar-new-tab-choice' for details."
     (when frame (select-frame frame))
     (tab-group (if tab-group-name tab-group-name auto-tab-groups-initial-group-name))))
 
-(defun auto-tab-groups--get-new-tab-choice (tab-group-name)
-  "Get value for `tab-bar-new-tab-choice' for TAB-GROUP-NAME."
-  (if (eq auto-tab-groups-new-choice 'group-scratch)
-      (format "*%s-scratch*" tab-group-name)
-    auto-tab-groups-new-choice))
-
-(defun auto-tab-groups--cleanup-before-close-advice (tab-group-name)
-  "Advice `tab-bar-close-group-tabs' to kill group scratch buffer before TAB-GROUP-NAME is closed."
-  (when (eq auto-tab-groups-new-choice 'group-scratch)
-    (if-let* ((tab-group-scratch-buffer-name (auto-tab-groups--get-new-tab-choice tab-group-name))
-              (tab-group-scratch-buffer (get-buffer tab-group-scratch-buffer-name)))
-        (kill-buffer tab-group-scratch-buffer))))
-
 (defun auto-tab-groups--setup ()
   "Setup advice for commands specified in the configuration."
   (dolist (command-data auto-tab-groups-create-commands)
@@ -221,8 +207,7 @@ Refer to `tab-bar-new-tab-choice' for details."
   ;; Create initial tab group
   (when auto-tab-groups-initial-group-name
     (auto-tab-groups--after-make-frame-function)
-    (add-hook 'after-make-frame-functions #'auto-tab-groups--after-make-frame-function))
-  (advice-add 'tab-bar-close-group-tabs :before #'auto-tab-groups--cleanup-before-close-advice))
+    (add-hook 'after-make-frame-functions #'auto-tab-groups--after-make-frame-function)))
 
 (defun auto-tab-groups--teardown ()
   "Remove advice from commands specified in the configuration."
@@ -236,8 +221,7 @@ Refer to `tab-bar-new-tab-choice' for details."
                          (car command-data)
                        (list (car command-data))))
       (advice-remove command #'auto-tab-groups--close-advice)))
-  (remove-hook 'after-make-frame-functions #'auto-tab-groups--after-make-frame-function)
-  (advice-remove 'tab-bar-close-group-tabs #'auto-tab-groups--cleanup-before-close-advice))
+  (remove-hook 'after-make-frame-functions #'auto-tab-groups--after-make-frame-function))
 
 ;;;###autoload
 (define-minor-mode auto-tab-groups-mode
@@ -266,7 +250,7 @@ Refer to `tab-bar-new-tab-choice' for details."
   "Create a new tab group with the name TAB-GROUP-NAME."
   (interactive (list (read-shell-command "Group Name: ")))
   (run-hooks 'auto-tab-groups-before-create-hook)
-  (let* ((tab-bar-new-tab-choice (auto-tab-groups--get-new-tab-choice tab-group-name))
+  (let* ((tab-bar-new-tab-choice auto-tab-groups-new-choice)
          (choice-buffer-name-p (stringp tab-bar-new-tab-choice)))
     (tab-bar-new-tab)
     ;; HACK: When a new tab is created the previous buffers list seems to stay untouched,
