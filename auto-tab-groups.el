@@ -28,23 +28,27 @@
   "Alist mapping commands to tab group specifications for creation.
 
 Each element should be a cons cell:
-- CAR:  Command (symbol) or list of commands.
-- CDR:  Group specification, which can be:
-  - A string:  Name of the tab group.
-  - A function:  Called to dynamically determine the group name. Its result should be a string.
-                If `:ignore-result' is nil, the command's result will be passed as argument to
-                this function. Otherwise the command is called first, the result passed to the
-                function, and then the tab group is created.
-  - A plist:  Provides additional options. Currently supported properties:
+- CAR: Command (symbol) or list of commands.
+- CDR: Group specification, which can be:
+  - A string: Name of the tab group.
+  - A function: Called to dynamically determine the group name. Its result
+                should be a string. If `:ignore-result' is nil, the command's
+                result will be passed as argument to this function. Otherwise
+                the command is called first, the result passed to the function
+                and then the tab group is created.
+  - A plist: Provides additional options. Currently supported properties:
     - `:tab-group-name': Group name (string) or a function returning a string.
-    - `:ignore-result':  If non-nil and value is a function, command's result is passed to the function.
-                         If nil, the tab group is created before the command is run.
+    - `:ignore-result':  If non-nil and value is a function, command's result is
+                         passed to the function. If nil, the tab group is
+                         created before the command is run.
 
 Example:
 
- '(((project-prompt-project-dir project-switch-to-buffer) . auto-tab-groups-group-name-project)
+ (((project-prompt-project-dir project-switch-to-buffer) .
+     auto-tab-groups-group-name-project)
    (my-open-command1 \"my-group\" :ignore-result t)
-   ((my-open-command2 my-open-command3) :tab-group-name \"my-group2\" :ignore-result t)
+   ((my-open-command2 my-open-command3) :tab-group-name \"my-group2\"
+                                        :ignore-result t)
    ((dirvish dirvish-fd) :tab-group-name \"dirvish\"))"
 
   :type '(alist :key-type (choice symbol (repeat symbol))
@@ -54,21 +58,23 @@ Example:
 (defcustom auto-tab-groups-close-commands nil
   "Alist mapping commands to tab group specifications for closure.
 
-  Each element should be a cons cell:
-  - CAR: Command (symbol) or list of commands.
-  - CDR: Group specification, which can be:
-  - A string:  Name of the tab group.
-  - A function:  Called to determine the tab group name. Its result should be a string.
+Each element should be a cons cell:
+- CAR: Command (symbol) or list of commands.
+- CDR: Group specification, which can be:
+  - A string: Name of the tab group.
+  - A function: Called to determine the tab group name. Its result should be a
+                string.
   - A plist: Provides additional options. Currently supported properties:
     - `:tab-group-name': Group name (string) or a function returning a string.
-    - `:ignore-result':  If non-nil, the tab group will be closed regardless of the command's result.
-                         If nil, the group is only closed if the command returns non-nil.
+    - `:ignore-result':  If non-nil, the tab group will be closed regardless of
+                         the command's result. If nil, the group is only closed
+                         if the command returns non-nil.
 
-  Example:
+Example:
 
-  '((project-kill-buffers . auto-tab-groups-group-name-project)
-    (my-close-command :tab-group-name \"my-group2\" :ignore-result t)
-    (dirvish-quit \"dirvish\" :ignore-result t))"
+  ((project-kill-buffers . auto-tab-groups-group-name-project)
+   (my-close-command :tab-group-name \"my-group2\" :ignore-result t)
+   (dirvish-quit \"dirvish\" :ignore-result t))"
   :type '(alist :key-type (choice symbol (repeat symbol))
                 :value-type (choice string function (plist :key-type symbol
                                                            :value-type (choice string function boolean)))))
