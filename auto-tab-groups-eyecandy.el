@@ -36,6 +36,10 @@ Each element is a cons cell:
   "Default icon displayed for tab groups."
   :type 'string)
 
+(defcustom auto-tab-groups-eyecandy-tab-bar-group-name-format-function nil
+  "Function to format the tab-group-name."
+  :type 'function)
+
 (defun auto-tab-groups-eyecandy--get-bar-image (height width color)
   "Generate a rectangular bar image with HEIGHT, WIDTH, and COLOR.
 
@@ -58,22 +62,19 @@ Inspired from nerd-icons-corfu: https://github.com/LuigiPiucco/nerd-icons-corfu/
          (icon-fun (intern (concat "nerd-icons-" style "icon")))
          (icon-name (if (equal style "suc")
                         (concat "nf-" icon)
-                        (concat "nf-"  style "-" icon))))
+                      (concat "nf-"  style "-" icon))))
     (or (and (fboundp icon-fun) (funcall icon-fun icon-name)) "?")))
 
 (defun auto-tab-groups-eyecandy--get-group-icon (tab-group-name)
   "Retrieve the icon for the given TAB-GROUP-NAME."
-  (if-let ((tab-group-icon-or-func
+  (if-let ((tab-group-icon-spec
             (cdr (seq-find (lambda (data)
-                             (let ((tab-group-name-or-func (car data)))
-                               (if (functionp tab-group-name-or-func)
-                                   (funcall tab-group-name-or-func tab-group-name)
-                                 (equal tab-group-name tab-group-name-or-func))))
-                           auto-tab-groups-eyecandy-icons)))
-           (icon-spec (if (functionp tab-group-icon-or-func)
-                           (funcall tab-group-icon-or-func tab-group-name)
-                         tab-group-icon-or-func)))
-      (if (listp icon-spec) (auto-tab-groups-eyecandy--nerd-icon icon-spec) icon-spec)
+                             (let ((tab-group-name-re (car data)))
+                               (string-match tab-group-name-re tab-group-name)))
+                           auto-tab-groups-eyecandy-icons))))
+      (if (listp tab-group-icon-spec)
+          (auto-tab-groups-eyecandy--nerd-icon tab-group-icon-spec)
+        tab-group-icon-spec)
     (auto-tab-groups-eyecandy--nerd-icon auto-tab-groups-eyecandy-default-icon)))
 
 (defun auto-tab-groups-eyecandy--tab-bar-tab-group-format-function (tab _ &optional current-p)
@@ -84,8 +85,11 @@ TAB is the tab object, I is the tab index,
          (tab-group-face (if current-p 'tab-bar-tab-group-current 'tab-bar-tab-group-inactive))
          (color (face-foreground (if current-p 'mode-line-emphasis 'shadow)))
          (group-sep (auto-tab-groups-eyecandy--get-bar-image auto-tab-groups-eyecandy-tab-height (if current-p 4 2) color))
-         (group-icon (auto-tab-groups-eyecandy--get-group-icon tab-group-name)))
-    (concat group-sep (propertize (concat " " group-icon " " tab-group-name " ") 'face tab-group-face))))
+         (group-icon (auto-tab-groups-eyecandy--get-group-icon tab-group-name))
+         (tab-group-name-formatted (if (functionp auto-tab-groups-eyecandy-tab-bar-group-name-format-function)
+                                       (funcall auto-tab-groups-eyecandy-tab-bar-group-name-format-function tab-group-name)
+                                     tab-group-name)))
+    (concat group-sep (propertize (concat " " group-icon " " tab-group-name-formatted " ") 'face tab-group-face))))
 
 (defun auto-tab-groups-eyecandy--tab-bar-tab-name-format-function (tab i)
   "Format the tab name for TAB-BAR.
@@ -151,19 +155,6 @@ TAB is the tab object and I is the tab index."
   (if auto-tab-groups-eyecandy-mode
       (auto-tab-groups-eyecandy--setup)
     (auto-tab-groups-eyecandy--teardown)))
-
-(defun auto-tab-groups-eyecandy-name-is-project (tab-group-name)
-  "Return whether the specified TAB-GROUP-NAME corresponds to a project."
-  (seq-find (lambda (dir)
-              (when-let ((name (file-name-nondirectory (directory-file-name dir))))
-                (equal name tab-group-name)))
-            (project-known-project-roots)))
-
-(defun auto-tab-groups-eyecandy-group-icon-project (tab-group-name)
-  "Determine the appropriate icon for the TAB-GROUP-NAME representing a project."
-  (if-let ((project-root-dir (auto-tab-groups-eyecandy-name-is-project tab-group-name)))
-      (if (file-remote-p project-root-dir) "" "")
-    auto-tab-groups-eyecandy-default-icon))
 
 (provide 'auto-tab-groups-eyecandy)
 ;;; auto-tab-groups-eyecandy.el ends here
