@@ -116,7 +116,7 @@ TAB is the tab object and I is the tab index."
         :help-echo "New tab"))
     (unless (iconp 'auto-tab-groups-eyecandy--tab-bar-close)
       (define-icon auto-tab-groups-eyecandy--tab-bar-close nil
-        '((symbol " 󰅖 ")
+        '((symbol " ✕ ")
           (text " x "))
         "Icon for closing the clicked tab."
         :version "29.1"
