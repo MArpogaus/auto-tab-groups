@@ -3,7 +3,7 @@
 ;; Copyright (C) 2024 Your Name
 
 ;; Author: Marcel Arpogaus <znepry.necbtnhf@tznvy.pbz>
-;; Version: 0.1
+;; Version: 0.2
 ;; Package-Requires: ((emacs "28.1"))
 ;; Keywords: convenience, tabs
 
