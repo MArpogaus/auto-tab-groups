@@ -59,6 +59,7 @@
             (project-type (auto-tab-groups-project--get-project-type dir)))
       (format "[%c] %s" project-type project-name)))
 
+;;;###autoload
 (define-minor-mode auto-tab-groups-project-mode
   "Toggle automatic tab group management for project buffers."
   :global t
