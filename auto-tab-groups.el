@@ -234,6 +234,7 @@ Refer to `tab-bar-new-tab-choice' for details."
       (auto-tab-groups--setup)
     (auto-tab-groups--teardown)))
 
+;;;###autoload
 (define-minor-mode auto-tab-groups-echo-mode
   "Print messages in the echo area when creating or switching tab groups."
   :global t
