@@ -30,11 +30,11 @@ This package provides automated tab group management for Emacs, allowing you to 
 Heavily inspired by [[https://github.com/fritzgrabo/project-tab-groups][project-tab-groups.el]], this package generalizes the concept to arbitrary commands, providing a more flexible approach to organizing your Emacs workflow.
 It automatically switches to or creates tab groups when specified commands are invoked, streamlining navigation and buffer management.
 This package has been implemented with simplicity in mind.
-It is a very thin layer that leverages Emacs' tab-bar mode for a user-defined workflow, adding very little complexity to it.
+It is a very thin layer that leverages Emacs' tab bar mode for a user-defined workflow, adding very little complexity to it.
 All the heavy lifting is done by =tab-bar.el=.
-Please refer to the [[https://www.gnu.org/software/emacs/manual/html_node/emacs/Tab-Bars.html][documentation]] to learn about tab-bar related commands.
+Please refer to the [[https://www.gnu.org/software/emacs/manual/html_node/emacs/Tab-Bars.html][documentation]] to learn about tab bar related commands.
 An optional "eye-candy" mode is provided for enhanced tab bar styling.
-However, by default, any further tab-bar related configurations are handed to the user.
+However, by default, any further tab bar related configurations are handed to the user.
 
 Result with the example configuration provided below:
 
@@ -105,7 +105,7 @@ Result with the example configuration provided below:
   (auto-tab-groups-mode 1)
       #+end_src
 
-If you don't want to enable the provided eye-candy mode for tab-bar styling, you might at least want to display the tab groups, by customizing =tab-bar-format=:
+If you don't want to enable the provided eye-candy mode for tab bar styling, you might at least want to display the tab groups, by customizing =tab-bar-format=:
 
 #+begin_src emacs-lisp
   (setq tab-bar-format '(tab-bar-format-tabs-groups
@@ -119,11 +119,12 @@ Please refer to the documentation of =tab-bar-mode= for details.
 ** Usage
 
 =auto-tab-groups= helps to implement automatic task separation, using build in tab bar groups.
-Any elisp function defined in =auto-tab-groups-create-commands= will create a new group or switch to an existing one with the given name.
-Any elisp function defined in =auto-tab-groups-close-commands= will close the corresponding group and all tabs belonging to it.
+A call of a elisp function defined in =auto-tab-groups-create-commands= will create a new group or switch to an existing one with the given name.
+A call of a elisp function defined in =auto-tab-groups-close-commands= will close the corresponding group and all tabs belonging to it.
+
 The package itself provides only a single user facing command =auto-tab-groups-new-group= for the convenient creation of new groups.
 It is not planed to extend its functionality any further and instead keep the code base as small and stable as possible.
-All cammands fot managing tabs and tab groups are provided by =tab-bar.el=.
+All commands for managing tabs and tab groups are provided by =tab-bar.el=.
 
 ** Customization
 
