@@ -44,8 +44,8 @@ Result with the example configuration provided below:
 
 *** Prerequisites
 
-- Emacs 28.1 or later
-- =tab-bar= and =project= built-in packages
+- Emacs 28.1 or later, including =tab-bar.el= and =project.el=.
+- optionally =nerd-icons= for build id "eye-candy" mode
 
 *** Installation
 
