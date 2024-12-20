@@ -8,9 +8,21 @@
 [[https://github.com/MArpogaus/auto-tab-groups/blob/main/LICENSE][https://img.shields.io/github/license/MArpogaus/auto-tab-groups.svg?style=flat-square]]
 [[https://linkedin.com/in/MArpogaus][https://img.shields.io/badge/-LinkedIn-black.svg?style=flat-square&logo=linkedin&colorB=555]]
 
-* auto tab groups
-
-#+TOC: headlines 2 local
+* auto tab groups :TOC_3_gh:noexport:
+  - [[#about-the-project][About The Project]]
+  - [[#getting-started][Getting Started]]
+    - [[#prerequisites][Prerequisites]]
+    - [[#installation][Installation]]
+  - [[#usage][Usage]]
+  - [[#customization][Customization]]
+    - [[#auto-tab-groups][auto-tab-groups]]
+    - [[#auto-tab-groups-project][auto-tab-groups-project]]
+    - [[#auto-tab-groups-eyecandy][auto-tab-groups-eyecandy]]
+  - [[#alternative-packages][Alternative Packages]]
+  - [[#contributing][Contributing]]
+  - [[#license][License]]
+  - [[#contact][Contact]]
+  - [[#acknowledgments][Acknowledgments]]
 
 ** About The Project
 
@@ -18,9 +30,11 @@ This package provides automated tab group management for Emacs, allowing you to 
 Heavily inspired by [[https://github.com/fritzgrabo/project-tab-groups][project-tab-groups.el]], this package generalizes the concept to arbitrary commands, providing a more flexible approach to organizing your Emacs workflow.
 It automatically switches to or creates tab groups when specified commands are invoked, streamlining navigation and buffer management.
 This package has been implemented with simplicity in mind.
-It is a very thin layer that leverages Emacs' tab-bar mode for a user-defined workflow, adding very little complexity to it.
+It is a very thin layer that leverages Emacs' tab bar mode for a user-defined workflow, adding very little complexity to it.
+All the heavy lifting is done by =tab-bar.el=.
+Please refer to the [[https://www.gnu.org/software/emacs/manual/html_node/emacs/Tab-Bars.html][documentation]] to learn about tab bar related commands.
 An optional "eye-candy" mode is provided for enhanced tab bar styling.
-However, by default, any further tab-bar related configurations are handed to the user.
+However, by default, any further tab bar related configurations are handed to the user.
 
 Result with the example configuration provided below:
 
@@ -30,8 +44,8 @@ Result with the example configuration provided below:
 
 *** Prerequisites
 
-- Emacs 28.1 or later
-- =tab-bar= and =project= built-in packages
+- Emacs 28.1 or later, including =tab-bar.el= and =project.el=.
+- optionally =nerd-icons= for build id "eye-candy" mode
 
 *** Installation
 
@@ -39,33 +53,50 @@ Result with the example configuration provided below:
 
 #+begin_src emacs-lisp
   (use-package auto-tab-groups
-    :straight (:host github :repo "Marpogaus/auto-tab-groups")
-    :after tab-bar project
+    :straight (:host github :repo "MArpogaus/auto-tab-groups")
+    :after tab-bar project nerd-icons
     :custom
-    ;; Automatically create tabs for projects, denote and dirvish buffers
+    ;; Automatically create tabs for denote, dirvish and customize buffers
     (auto-tab-groups-create-commands
-     '(((project-prompt-project-dir project-switch-to-buffer) . auto-tab-groups-group-name-project)
-       ((denote-create-note denote-menu-list-notes consult-denote-find consult-denote-grep) . "denote")
+     '(((denote-create-note denote-menu-list-notes consult-denote-find consult-denote-grep) . "denote")
+       ((custom-buffer-create-internal) . "customize")
        ((dirvish dirvish-fd) . "dirvish")))
-    ;; Close the project tabs when the project buffers are killed
     (auto-tab-groups-close-commands
-     '((project-kill-buffers . auto-tab-groups-group-name-project)
-       (dirvish-quit . "dirvish")))
-    ;; Enable the "eyecandy-mode" for modern tab bars.
-    (auto-tab-groups-eyecandy-mode t)
+     '((dirvish-quit "dirvish" :ignore-result t)
+       (Custom-buffer-done "customize" :ignore-result t)))
+    ;; Customize height of tabs
+    (auto-tab-groups-eyecandy-tab-height 25)
     ;; Define tab group icons (requires nerd-icons)
     (auto-tab-groups-eyecandy-icons
-     '(("HOME"                                   . "")
-       ("dirvish"                                . "")
-       ("denote"                                 . "󱓩")
-       (auto-tab-groups-eyecandy-name-is-project . auto-tab-groups-eyecandy-group-icon-project)))
+     '(("HOME"       . (:style "suc" :icon "custom-emacs"))
+       ("dirvish"    . (:style "suc" :icon "custom-folder_oct"))
+       ("denote"     . (:style "md"  :icon "notebook_edit"))
+       ("customize"  . (:style "cod" :icon "settings"))
+       ("^\\[P\\] *" . (:style "oct" :icon "repo"))
+       ("^\\[T\\] *" . (:style "cod" :icon "remote"))))
+    ;; Remove prefix from project groups
+    (auto-tab-groups-eyecandy-tab-bar-group-name-format-function
+     (lambda (tab-group-name)
+       (if (string-match "^\\[.\\] *" tab-group-name)
+           (substring tab-group-name (match-end 0))
+         tab-group-name)))
+    :bind
+    ("<your-binding>" . auto-tab-groups-new-group)
     :init
-    (auto-tab-groups-mode))
+    ;; automatically assign projects to groups
+    (auto-tab-groups-project-mode)
+    ;; Enable modern tabs style
+    (auto-tab-groups-eyecandy-mode)
+    ;; Enable automatic tab group management based on the rules defined above
+    (auto-tab-groups-mode)
+    :hook
+    ;; HACK: Re-nable eyecandy mode after tab-bar-mode has been disabled
+    (tab-bar-mode . auto-tab-groups-eyecandy-mode))
 #+end_src
 
 **** Manual Installation
 
-1. Download =auto-tab-groups.el= and =auto-tab-groups-eyecandy.el=.
+1. Download =auto-tab-groups.el=, =auto-tab-groups-project.el= and =auto-tab-groups-eyecandy.el=.
 2. Place them in your Emacs =load-path=.
 3. Add the following to your init file:
 
@@ -74,7 +105,7 @@ Result with the example configuration provided below:
   (auto-tab-groups-mode 1)
       #+end_src
 
-If you don't want to enable the provided eye-candy mode for tab-bar styling, you might at least want to display the tab groups, by customizing =tab-bar-format=:
+If you don't want to enable the provided eye-candy mode for tab bar styling, you might at least want to display the tab groups, by customizing =tab-bar-format=:
 
 #+begin_src emacs-lisp
   (setq tab-bar-format '(tab-bar-format-tabs-groups
@@ -83,6 +114,17 @@ If you don't want to enable the provided eye-candy mode for tab-bar styling, you
 #+end_src
 
 Please refer to the documentation of =tab-bar-mode= for details.
+
+
+** Usage
+
+=auto-tab-groups= helps to implement automatic task separation, using build in tab bar groups.
+A call of a elisp function defined in =auto-tab-groups-create-commands= will create a new group or switch to an existing one with the given name.
+A call of a elisp function defined in =auto-tab-groups-close-commands= will close the corresponding group and all tabs belonging to it.
+
+The package itself provides only a single user facing command =auto-tab-groups-new-group= for the convenient creation of new groups.
+It is not planed to extend its functionality any further and instead keep the code base as small and stable as possible.
+All commands for managing tabs and tab groups are provided by =tab-bar.el=.
 
 ** Customization
 
@@ -111,18 +153,21 @@ For =create-commands=, the CDR can be a function that receives the command's res
 The tab group is created if it doesn't exist, otherwise, Emacs switches to it.
 =close-commands= work similarly, closing the specified tab group after the command is run.
 
-This package provides a helper function to integrate with =project.el=:
+*** auto-tab-groups-project 
 
-=auto-tab-groups-group-name-project= takes an optional directory argument and returns the project name located at that directory, or the current project name if no directory is provided.
-It uses =project-name= if the project is defined or falls back to the directory name otherwise.
-This is useful when you would like to automatically assign tab groups based on the current project like this:
+This package provides a minor mode to integrate with =project.el=, similar to [[https://github.com/fritzgrabo/project-tab-groups][project-tab-groups.el]], simply enable it with:
 
-#+begin_src emacs-lisp
-  (setq auto-tab-groups-create-commands
-        '(((project-prompt-project-dir project-switch-to-buffer) . auto-tab-groups-group-name-project)
-          ;; ... your other commands
-          ))
-#+end_src
+            #+begin_src emacs-lisp
+  (auto-tab-groups-project-mode)
+      #+end_src
+
+or
+
+            #+begin_src emacs-lisp
+  (setq auto-tab-groups-project-mode 1)
+      #+end_src
+
+This mode dos currently not offer any customization.
 
 *** auto-tab-groups-eyecandy
 
@@ -140,20 +185,18 @@ The =auto-tab-groups-eyecandy= minor mode provides additional customization opti
 - CAR: tab group name (string) or predicate function.
 - CDR: icon string.
 
-This package provides helper functions to integrate with =project.el=:
+** Alternative Packages
 
-- =auto-tab-groups-eyecandy-name-is-project=: takes the tab group name as an argument and checks whether it corresponds to an existing project. It returns the project root directory if a match is found or nil otherwise.
+- [[https://github.com/mclear-tools/tabspaces][tabspaces]], to leverage the Emacs tab bar and the Emacs built-in
+  project.el to create buffer-isolated workspaces that also integrate
+  with version-controlled projects.
 
-- =auto-tab-groups-eyecandy-group-icon-project=: takes a tab group name and returns a suitable icon based on whether the name refers to a project directory, and whether that directory is remote or local. If it is not a project, it returns the default icon.
+- [[https://github.com/fritzgrabo/project-tab-groups][project-tab-groups]], implements automatic management of tab groups in the context
+  of project.el-based projects only. If you just want project
+  isolation, use this.
 
-You can use these in =auto-tab-groups-eyecandy-icons= like this:
-
-#+begin_src emacs-lisp
-  (setq auto-tab-groups-eyecandy-icons
-        '((auto-tab-groups-eyecandy-name-is-project . auto-tab-groups-eyecandy-group-icon-project)
-          ;; ... your other icons
-          ))
-#+end_src
+- [[https://github.com/alphapapa/activities.el][activities]], which allows the user to manage frames/tabs, windows,
+  and buffers according to their purpose.
 
 ** Contributing
 
@@ -172,5 +215,5 @@ Project Link:
 
 ** Acknowledgments
 
-- Special thanks to [[https://github.com/fritzgrabo][Fritz Grabo]] for the inspiration and the excellent =project-tab-groups= package.
+- Special thanks to [[https://github.com/fritzgrabo][Fritz Grabo]] for the inspiration and the excellent [[https://github.com/fritzgrabo/project-tab-groups][project-tab-groups]] package.
 
