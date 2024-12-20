@@ -68,12 +68,12 @@ Result with the example configuration provided below:
     (auto-tab-groups-eyecandy-tab-height 25)
     ;; Define tab group icons (requires nerd-icons)
     (auto-tab-groups-eyecandy-icons
-     '(("HOME"       . "")
-       ("dirvish"    . "")
-       ("denote"     . "󱓩")
-       ("customize"  . "")
-       ("^\\[P\\] *" . "")
-       ("^\\[T\\] *" . "")))
+     '(("HOME"       . (:style "suc" :icon "custom-emacs"))
+       ("dirvish"    . (:style "suc" :icon "custom-folder_oct"))
+       ("denote"     . (:style "md"  :icon "notebook_edit"))
+       ("customize"  . (:style "cod" :icon "settings"))
+       ("^\\[P\\] *" . (:style "oct" :icon "repo"))
+       ("^\\[T\\] *" . (:style "cod" :icon "remote"))))
     ;; Remove prefix from project groups
     (auto-tab-groups-eyecandy-tab-bar-group-name-format-function
      (lambda (tab-group-name)
