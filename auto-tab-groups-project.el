@@ -30,7 +30,7 @@
     (if (file-remote-p project-root) ?T ?P)))
 
 (defvar auto-tab-groups-project--create-commands
-  '((project-prompt-project-dir project-switch-to-buffer) . auto-tab-groups-group-name-project))
+  '((project-prompt-project-dir project-prompt-project-name project-switch-to-buffer) . auto-tab-groups-group-name-project))
 
 (defvar auto-tab-groups-project--close-commands
   '(project-kill-buffers . auto-tab-groups-group-name-project))
