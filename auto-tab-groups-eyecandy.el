@@ -131,7 +131,6 @@ TAB is the tab object and I is the tab index."
                          tab-bar-format-menu-bar)
         tab-bar-separator ""
         tab-bar-auto-width nil
-        tab-bar-close-button-show t
         tab-bar-tab-group-format-function #'auto-tab-groups-eyecandy--tab-bar-tab-group-format-function
         tab-bar-tab-name-format-function #'auto-tab-groups-eyecandy--tab-bar-tab-name-format-function))
 
@@ -141,7 +140,6 @@ TAB is the tab object and I is the tab index."
     (tab-bar--load-buttons))
   (dolist (s '(tab-bar-separator
                tab-bar-auto-width
-               tab-bar-close-button-show
                tab-bar-tab-group-format-function
                tab-bar-tab-name-format-function
                tab-bar-format))
