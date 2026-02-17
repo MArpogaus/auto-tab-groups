@@ -17,12 +17,12 @@
 (require 'project)
 (require 'auto-tab-groups)
 
-(defun auto-tab-groups-project--get-project-name (&optional dir)
+(defun auto-tab-groups-project--get-project-name (dir)
   "Return the name for the project in DIR or the current project if DIR is nil."
-  (when-let ((project (if (and dir (stringp dir)) (project-current nil dir) (project-current nil))))
+  (when-let ((project (if (and dir (stringp dir)) (project--find-in-directory dir))))
     (project-name project)))
 
-(defun auto-tab-groups-project--get-project-type (&optional dir)
+(defun auto-tab-groups-project--get-project-type (dir)
   "Return the type of the project in DIR."
   (when-let* ((project (if (and dir (stringp dir)) (project-current nil dir)
                          (project-current nil)))
@@ -53,7 +53,7 @@
   (auto-tab-groups--advice-remove 'close auto-tab-groups-project--close-commands))
 
 ;;;###autoload
-(defun auto-tab-groups-group-name-project (&optional dir)
+(defun auto-tab-groups-group-name-project (dir)
   "Return the tab group name for the project in DIR."
   (if-let* ((project-name (auto-tab-groups-project--get-project-name dir))
             (project-type (auto-tab-groups-project--get-project-type dir)))
