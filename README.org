@@ -45,7 +45,7 @@ Result with the example configuration provided below:
 *** Prerequisites
 
 - Emacs 28.1 or later, including =tab-bar.el= and =project.el=.
-- optionally =nerd-icons= for build id "eye-candy" mode
+- optionally =nerd-icons= for build in "eye-candy" mode
 
 *** Installation
 
@@ -171,14 +171,18 @@ This mode dos currently not offer any customization.
 
 *** auto-tab-groups-eyecandy
 
+*Note:* This packages requires a minimum emacs version of =29.1= or higher for icon support.
+
 The =auto-tab-groups-eyecandy= minor mode provides additional customization options for enhanced tab bar styling:
 
 
-| Option                                | Type   | Description                   |
-|---------------------------------------+--------+-------------------------------|
-| =auto-tab-groups-eyecandy-icons=        | alist  | Map tab group names to icons. |
-| =auto-tab-groups-eyecandy-tab-height=   | number | Tab height in pixels.         |
-| =auto-tab-groups-eyecandy-default-icon= | string | Default icon for tab groups.  |
+| Option                                                      | Type     | Description                              |
+|-------------------------------------------------------------+----------+------------------------------------------|
+| =auto-tab-groups-eyecandy-icons=                              | alist    | Map tab group names to icons.            |
+| =auto-tab-groups-eyecandy-tab-height=                         | number   | Tab height in pixels.                    |
+| =auto-tab-groups-eyecandy-default-icon=                       | string   | Default icon for tab groups.             |
+| =auto-tab-groups-eyecandy-tab-bar-format=                     | list     | List of tab bar elements to use.         |
+| =auto-tab-groups-eyecandy-tab-bar-group-name-format-function= | function | Custom function to alter the group name. |
 
 =auto-tab-groups-eyecandy-icons= is an alist where:
 
