@@ -4,7 +4,7 @@
 
 ;; Author: Marcel Arpogaus <znepry.necbtnhf@tznvy.pbz>
 ;; Version: 0.2
-;; Package-Requires: ((emacs "28.1"))
+;; Package-Requires: ((emacs "29.1"))
 ;; Keywords: convenience, tabs
 
 ;;; Commentary:
@@ -15,6 +15,7 @@
 
 ;;; Code:
 (require 'tab-bar)
+(require 'icons)
 
 (defgroup auto-tab-groups-eyecandy ()
   "Modern tab bar."
@@ -120,25 +121,23 @@ TAB is the tab object and I is the tab index."
 
 (defun auto-tab-groups-eyecandy--setup ()
   "Setup advice for defined commands."
-  (when (>= emacs-major-version 29)
-    (require 'icons)
-    (unless (iconp 'auto-tab-groups-eyecandy--tab-bar-new)
-      (define-icon auto-tab-groups-eyecandy--tab-bar-new nil
-        '((symbol "  " :face tab-bar-tab-inactive)
-          (text " + "))
-        "Icon for creating a new tab."
-        :version "29.1"
-        :help-echo "New tab"))
-    (unless (iconp 'auto-tab-groups-eyecandy--tab-bar-close)
-      (define-icon auto-tab-groups-eyecandy--tab-bar-close nil
-        '((symbol " ✕ ")
-          (text " x "))
-        "Icon for closing the clicked tab."
-        :version "29.1"
-        :help-echo "Click to close tab"))
-    (setq tab-bar-new-button (icon-string 'auto-tab-groups-eyecandy--tab-bar-new)
-          tab-bar-close-button (propertize (icon-string 'auto-tab-groups-eyecandy--tab-bar-close)
-                                           'close-tab t)))
+  (unless (iconp 'auto-tab-groups-eyecandy--tab-bar-new)
+    (define-icon auto-tab-groups-eyecandy--tab-bar-new nil
+      '((symbol "  " :face tab-bar-tab-inactive)
+        (text " + "))
+      "Icon for creating a new tab."
+      :version "29.1"
+      :help-echo "New tab"))
+  (unless (iconp 'auto-tab-groups-eyecandy--tab-bar-close)
+    (define-icon auto-tab-groups-eyecandy--tab-bar-close nil
+      '((symbol " ✕ ")
+        (text " x "))
+      "Icon for closing the clicked tab."
+      :version "29.1"
+      :help-echo "Click to close tab"))
+  (setq tab-bar-new-button (icon-string 'auto-tab-groups-eyecandy--tab-bar-new)
+        tab-bar-close-button (propertize (icon-string 'auto-tab-groups-eyecandy--tab-bar-close)
+                                         'close-tab t))
   (setq tab-bar-format auto-tab-groups-eyecandy-tab-bar-format
         tab-bar-separator ""
         tab-bar-auto-width nil
