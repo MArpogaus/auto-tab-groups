@@ -1,6 +1,6 @@
 ;;; auto-tab-groups-eyecandy.el --- Modern tab bar style -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2024 Your Name
+;; Copyright (C) 2026 Marcel Arpogaus
 
 ;; Author: Marcel Arpogaus <znepry.necbtnhf@tznvy.pbz>
 ;; Version: 0.2
