@@ -40,6 +40,21 @@ Each element is a cons cell:
   "Function to format the tab-group-name."
   :type 'function)
 
+(defun auto-tab-goups--format-spacer (&optional width)
+  "Return a single space to use in `tab-bar-format'."
+  (lambda nil (propertize " " 'display `(space-width ,width))))
+
+(defcustom auto-tab-groups-eyecandy-tab-bar-format
+  `(tab-bar-format-tabs-groups
+    auto-tab-groups-new-group--tab-bar-format-new
+    tab-bar-format-align-right
+    tab-bar-format-global
+    ,(auto-tab-goups--format-spacer 0.1)
+    tab-bar-format-menu-bar
+    ,(auto-tab-goups--format-spacer 0.75))
+  "List of tab bar items. See `tab-bar-format' for datails."
+  :type 'hook)
+
 (defun auto-tab-groups-eyecandy--get-bar-image (height width color)
   "Generate a rectangular bar image with HEIGHT, WIDTH, and COLOR.
 
@@ -124,11 +139,7 @@ TAB is the tab object and I is the tab index."
     (setq tab-bar-new-button (icon-string 'auto-tab-groups-eyecandy--tab-bar-new)
           tab-bar-close-button (propertize (icon-string 'auto-tab-groups-eyecandy--tab-bar-close)
                                            'close-tab t)))
-  (setq tab-bar-format '(tab-bar-format-tabs-groups
-                         auto-tab-groups-new-group--tab-bar-format-new
-                         tab-bar-format-align-right
-                         tab-bar-format-global
-                         tab-bar-format-menu-bar)
+  (setq tab-bar-format auto-tab-groups-eyecandy-tab-bar-format
         tab-bar-separator ""
         tab-bar-auto-width nil
         tab-bar-tab-group-format-function #'auto-tab-groups-eyecandy--tab-bar-tab-group-format-function
