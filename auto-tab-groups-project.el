@@ -1,6 +1,6 @@
 ;;; auto-tab-groups.el --- Simple auto tab group creator for specified commands -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2024 Marcel Arpogaus
+;; Copyright (C) 2026 Marcel Arpogaus
 
 ;; Author: Marcel Arpogaus <znepry.necbtnhf@tznvy.pbz>
 ;; Version: 0.2
