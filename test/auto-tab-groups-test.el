@@ -122,6 +122,48 @@ advice carries a name; without it the advice would stay behind."
       (should (eq (funcall advice #'auto-tab-groups-test--command) 'result))
       (should (equal auto-tab-groups-test--switched "early")))))
 
+(ert-deftest auto-tab-groups-test-create-advice-carries-the-buffer ()
+  "What the command showed goes to the group, and the old tab stays put.
+The group name is only known once the command has run, and by then it
+has shown its buffer in the tab that was current.  So the tab is put
+back the way it was, and the buffer follows into the new group."
+  (let ((home (get-buffer-create "*auto-tab-groups-test home*"))
+        (opened (get-buffer-create "*auto-tab-groups-test opened*"))
+        at-switch)
+    (unwind-protect
+        (cl-letf (((symbol-function 'auto-tab-groups--switch-or-create-tab-group)
+                   (lambda (name) (setq at-switch (cons name (current-buffer)))))
+                  ((symbol-function 'auto-tab-groups--current-group)
+                   (lambda () "the old one")))
+          (switch-to-buffer home)
+          (let ((advice (auto-tab-groups--get-create-advice
+                         (list :tab-group-name (lambda (&rest _) "the new one")))))
+            (funcall advice (lambda () (switch-to-buffer opened) opened)))
+          ;; the group is switched with the old tab as the user left it
+          (should (equal (car at-switch) "the new one"))
+          (should (eq (cdr at-switch) home))
+          ;; and the buffer arrives in the new group afterwards
+          (should (eq (current-buffer) opened)))
+      (kill-buffer home)
+      (kill-buffer opened))))
+
+(ert-deftest auto-tab-groups-test-create-advice-carries-nothing-extra ()
+  "A command that showed nothing leaves the new group as it was."
+  (let ((home (get-buffer-create "*auto-tab-groups-test home*"))
+        at-switch)
+    (unwind-protect
+        (cl-letf (((symbol-function 'auto-tab-groups--switch-or-create-tab-group)
+                   (lambda (name) (setq at-switch (cons name (current-buffer)))))
+                  ((symbol-function 'auto-tab-groups--current-group)
+                   (lambda () "the old one")))
+          (switch-to-buffer home)
+          (let ((advice (auto-tab-groups--get-create-advice
+                         (list :tab-group-name (lambda (&rest _) "the new one")))))
+            (funcall advice (lambda () 'a-directory)))
+          (should (equal (car at-switch) "the new one"))
+          (should (eq (current-buffer) home)))
+      (kill-buffer home))))
+
 (ert-deftest auto-tab-groups-test-find-tab-by-group-name ()
   "Tabs are found by their group name."
   (cl-letf (((symbol-function 'tab-bar-tabs-function)

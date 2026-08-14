@@ -165,6 +165,10 @@ customization and may not be modified."
   (when auto-tab-groups-echo-mode
     (message "Switched to tab group: %s" (alist-get 'group tab))))
 
+(defun auto-tab-groups--current-group ()
+  "Return the group name of the current tab, or nil."
+  (alist-get 'group (tab-bar--current-tab-find)))
+
 (defun auto-tab-groups--switch-or-create-tab-group (tab-group-name)
   "Switch to or create a tab group with the name TAB-GROUP-NAME."
   (when tab-group-name
@@ -193,10 +197,26 @@ Nothing happens when no such group exists."
                                   tab-group-name-or-func)))
             (auto-tab-groups--switch-or-create-tab-group tab-group-name)
             (apply orig-fun args))
-        (let* ((results (apply orig-fun args))
+        ;; The group name is only known once the command has run, and
+        ;; by then the command has shown whatever it produced in the
+        ;; tab that was current.  Leave that tab as it was and take
+        ;; the buffer along to the group it belongs to.
+        (let* ((buffer (current-buffer))
+               (windows (current-window-configuration))
+               (results (apply orig-fun args))
+               (shown (current-buffer))
                (tab-group-name (if tab-group-name-functionp (funcall tab-group-name-or-func results)
-                                 tab-group-name-or-func)))
+                                 tab-group-name-or-func))
+               ;; Only when the command showed something and the group
+               ;; it belongs to is another one.  A command that merely
+               ;; prompts leaves the new tab as it was.
+               (carry (and tab-group-name
+                           (not (eq shown buffer))
+                           (not (equal tab-group-name
+                                       (auto-tab-groups--current-group))))))
+          (when carry (set-window-configuration windows))
           (auto-tab-groups--switch-or-create-tab-group tab-group-name)
+          (when (and carry (buffer-live-p shown)) (switch-to-buffer shown))
           results)))))
 
 (defun auto-tab-groups--get-close-advice (tab-group-spec)
