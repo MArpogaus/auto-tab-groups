@@ -41,7 +41,10 @@ However, by default, any further tab bar related configurations are handed to th
 
 Result with the example configuration provided below:
 
-[[file:screenshot.png]]
+[[file:img/demo.gif]]
+
+Every project gets its own tab group, commands can open groups of
+their own, and closing the work closes the group.
 
 ** Getting Started
 
