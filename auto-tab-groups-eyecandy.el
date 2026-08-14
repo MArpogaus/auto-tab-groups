@@ -96,6 +96,16 @@ https://github.com/seagle0128/doom-modeline/blob/ec6bc00ac035e75ad10b52e516ea5d9
         'pbm t :foreground color :ascent 'center))
     (propertize "|" 'face (list :foreground color :background color))))
 
+(defun auto-tab-groups-eyecandy--displayable-p (char)
+  "Return non-nil when the selected frame has a glyph for CHAR.
+`char-displayable-p' answers for the character set and not for the
+font, so on a graphical frame ask the font instead.  Nerd font
+glyphs live in the private use area, and without the font they draw
+as a hex box."
+  (if (display-graphic-p)
+      (internal-char-font nil char)
+    (char-displayable-p char)))
+
 (defun auto-tab-groups-eyecandy--nerd-icon (icon-spec)
   "Return the nerd icon glyph for ICON-SPEC.
 
@@ -139,7 +149,10 @@ CURRENT-P is non-nil when TAB is the selected one."
 TAB is the tab object and I is the tab index."
   (let ((current-p (eq (car tab) 'current-tab)))
     (propertize
-     (concat (if current-p " " " ")
+     (concat (cond ((not current-p) " ")
+                   ((auto-tab-groups-eyecandy--displayable-p #xeb70)
+                    " ")
+                   (t "\u203a "))
              (if tab-bar-tab-hints (format "%d " i) "")
              (alist-get 'name tab)
              (if (and tab-bar-close-button-show current-p)
