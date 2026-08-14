@@ -4,7 +4,7 @@
 
 ;; Author: Marcel Arpogaus <znepry.necbtnhf@tznvy.pbz>
 ;; Version: 0.2
-;; Package-Requires: ((emacs "28.1"))
+;; Package-Requires: ((emacs "29.1"))
 ;; Keywords: convenience, tabs
 ;; URL: https://github.com/MArpogaus/auto-tab-groups
 
@@ -58,13 +58,13 @@ Each element should be a cons cell:
 
 Example:
 
- (((project-prompt-project-dir project-switch-to-buffer) .
-     auto-tab-groups-group-name-project)
-   (my-open-command1 \"my-group\" :ignore-result t)
-   ((my-open-command2 my-open-command3) :tab-group-name \"my-group2\"
-                                        :ignore-result t)
-   ((dirvish dirvish-fd) :tab-group-name \"dirvish\"))"
+ ((my-open-command1 \"my-group\" :ignore-result t)
+  ((my-open-command2 my-open-command3) :tab-group-name \"my-group2\"
+                                       :ignore-result t)
+  ((my-open-command4 my-open-command5) :tab-group-name \"my-group3\"))
 
+See `auto-tab-groups-project-group-name' for a group name that follows
+the current project."
   :type '(alist :key-type (choice symbol (repeat symbol))
                 :value-type (choice string function (plist :key-type symbol
                                                            :value-type (choice string function boolean)))))
@@ -86,9 +86,11 @@ Each element should be a cons cell:
 
 Example:
 
-  ((project-kill-buffers . auto-tab-groups-group-name-project)
-   (my-close-command :tab-group-name \"my-group2\" :ignore-result t)
-   (dirvish-quit \"dirvish\" :ignore-result t))"
+ ((my-close-command1 :tab-group-name \"my-group2\" :ignore-result t)
+  (my-close-command2 \"my-group3\" :ignore-result t))
+
+See `auto-tab-groups-project-group-name' for a group name that follows
+the current project."
   :type '(alist :key-type (choice symbol (repeat symbol))
                 :value-type (choice string function (plist :key-type symbol
                                                            :value-type (choice string function boolean)))))
@@ -124,6 +126,12 @@ Refer to `tab-bar-new-tab-choice' for details."
   "Hook run after a tab group is deleted."
   :type 'hook)
 
+;;;###autoload
+(define-minor-mode auto-tab-groups-echo-mode
+  "Print messages in the echo area when creating or switching tab groups."
+  :global t
+  :group 'auto-tab-groups)
+
 (defun auto-tab-groups--find-tab-by-group-name (tab-group-name)
   "Return the first tab with the group name TAB-GROUP-NAME."
   (seq-find (lambda (tab) (equal tab-group-name (alist-get 'group tab)))
@@ -139,11 +147,11 @@ Refer to `tab-bar-new-tab-choice' for details."
     (if (nlistp groups-spec) (list :tab-group-name groups-spec)
       (plist-put (cdr groups-spec) :tab-group-name (car groups-spec)))))
 
-(defun auto-tab-groups--switch-tab-group (tab-group-name)
-  "Switch to the tab group with the name TAB-GROUP-NAME."
-  (tab-bar-select-tab (1+ (tab-bar--tab-index tab-group-name)))
+(defun auto-tab-groups--switch-tab-group (tab)
+  "Switch to TAB, the first tab of the wanted tab group."
+  (tab-bar-select-tab (1+ (tab-bar--tab-index tab)))
   (when auto-tab-groups-echo-mode
-    (message "Switched to tab group: %s" tab-group-name)))
+    (message "Switched to tab group: %s" (alist-get 'group tab))))
 
 (defun auto-tab-groups--switch-or-create-tab-group (tab-group-name)
   "Switch to or create a tab group with the name TAB-GROUP-NAME."
@@ -205,23 +213,33 @@ Refer to `tab-bar-new-tab-choice' for details."
     (when frame (select-frame frame))
     (tab-group (if tab-group-name tab-group-name auto-tab-groups-initial-group-name))))
 
+(defun auto-tab-groups--commands (command-data)
+  "Return the list of commands named by COMMAND-DATA."
+  (if (listp (car command-data))
+      (car command-data)
+    (list (car command-data))))
+
+(defun auto-tab-groups--advice-name (kind)
+  "Return the name under which advice of KIND is registered.
+KIND is either the symbol `create' or the symbol `close'.  The advice
+carries a name because each call to the advice constructor returns a
+fresh closure, which `advice-remove' could not find again."
+  (intern (format "auto-tab-groups--%s" kind)))
+
 (defun auto-tab-groups--advice-add (kind command-data)
-  "Add advice of KIND to the commands in COMMAND-DATA."
+  "Advise the commands in COMMAND-DATA to manage tab groups.
+KIND is either the symbol `create' or the symbol `close'."
   (let ((tab-group-spec (auto-tab-groups--get-group-spec command-data))
-        (get-advice-fun (intern (format "auto-tab-groups--get-%s-advice" (symbol-name kind)))))
-    (dolist (command (if (listp (car command-data))
-                         (car command-data)
-                       (list (car command-data))))
-      (advice-add command :around (funcall get-advice-fun tab-group-spec)))))
+        (get-advice-fun (intern (format "auto-tab-groups--get-%s-advice" kind))))
+    (dolist (command (auto-tab-groups--commands command-data))
+      (advice-add command :around (funcall get-advice-fun tab-group-spec)
+                  `((name . ,(auto-tab-groups--advice-name kind)))))))
 
 (defun auto-tab-groups--advice-remove (kind command-data)
-  "Remove advice of KIND from the commands in COMMAND-DATA."
-  (let ((tab-group-spec (auto-tab-groups--get-group-spec command-data))
-        (get-advice-fun (intern (format "auto-tab-groups--get-%s-advice" (symbol-name kind)))))
-    (dolist (command (if (listp (car command-data))
-                         (car command-data)
-                       (list (car command-data))))
-      (advice-remove command (funcall get-advice-fun tab-group-spec)))))
+  "Remove the advice of KIND from the commands in COMMAND-DATA.
+KIND is either the symbol `create' or the symbol `close'."
+  (dolist (command (auto-tab-groups--commands command-data))
+    (advice-remove command (auto-tab-groups--advice-name kind))))
 
 (defun auto-tab-groups--setup ()
   "Setup advice for commands specified in the configuration."
@@ -250,15 +268,9 @@ Refer to `tab-bar-new-tab-choice' for details."
       (auto-tab-groups--setup)
     (auto-tab-groups--teardown)))
 
-;;;###autoload
-(define-minor-mode auto-tab-groups-echo-mode
-  "Print messages in the echo area when creating or switching tab groups."
-  :global t
-  :group 'auto-tab-groups)
-
 (defun auto-tab-groups-new-group (tab-group-name)
   "Create a new tab group with the name TAB-GROUP-NAME."
-  (interactive (list (read-shell-command "Group Name: ")))
+  (interactive (list (read-string "Group name: ")))
   (run-hooks 'auto-tab-groups-before-create-hook)
   (let* ((tab-bar-new-tab-choice auto-tab-groups-new-choice)
          (choice-buffer-name-p (stringp tab-bar-new-tab-choice)))
