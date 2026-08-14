@@ -1,4 +1,4 @@
-;;; auto-tab-groups.el --- Simple auto tab group creator for specified commands -*- lexical-binding: t; -*-
+;;; auto-tab-groups-project.el --- Project integration for auto-tab-groups -*- lexical-binding: t; -*-
 
 ;; Copyright (C) 2026 Marcel Arpogaus
 
@@ -6,6 +6,22 @@
 ;; Version: 0.2
 ;; Package-Requires: ((emacs "28.1"))
 ;; Keywords: convenience, tabs
+;; URL: https://github.com/MArpogaus/auto-tab-groups
+
+;; This file is not part of GNU Emacs.
+
+;; This program is free software: you can redistribute it and/or modify
+;; it under the terms of the GNU General Public License as published by
+;; the Free Software Foundation, either version 3 of the License, or
+;; (at your option) any later version.
+
+;; This program is distributed in the hope that it will be useful,
+;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;; GNU General Public License for more details.
+
+;; You should have received a copy of the GNU General Public License
+;; along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 ;;; Commentary:
 
@@ -19,7 +35,7 @@
 
 (defun auto-tab-groups-project--get-project-name (dir)
   "Return the name for the project in DIR or the current project if DIR is nil."
-  (when-let ((project (if (and dir (stringp dir)) (project--find-in-directory dir))))
+  (when-let* ((project (if (and dir (stringp dir)) (project--find-in-directory dir))))
     (project-name project)))
 
 (defun auto-tab-groups-project--get-project-type (dir)
@@ -36,6 +52,9 @@
   '(project-kill-buffers . auto-tab-groups-group-name-project))
 
 (defun auto-tab-groups-project--project-kill-buffers-advice (orig-fun &rest args)
+  "Return the root of the current project when ORIG-FUN killed its buffers.
+ORIG-FUN is `project-kill-buffers', ARGS its arguments.  The tab group
+name function needs the directory, which is gone once the buffers are."
   (when-let* ((project (project-current t))
               (dir (project-root project)))
     (when (funcall orig-fun args) dir)))
@@ -69,4 +88,4 @@
     (auto-tab-groups-project--teardown)))
 
 (provide 'auto-tab-groups-project)
-;;; auto-tab-groups.el ends here
+;;; auto-tab-groups-project.el ends here
