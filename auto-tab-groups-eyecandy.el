@@ -6,12 +6,28 @@
 ;; Version: 0.2
 ;; Package-Requires: ((emacs "29.1"))
 ;; Keywords: convenience, tabs
+;; URL: https://github.com/MArpogaus/auto-tab-groups
+
+;; This file is not part of GNU Emacs.
+
+;; This program is free software: you can redistribute it and/or modify
+;; it under the terms of the GNU General Public License as published by
+;; the Free Software Foundation, either version 3 of the License, or
+;; (at your option) any later version.
+
+;; This program is distributed in the hope that it will be useful,
+;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;; GNU General Public License for more details.
+
+;; You should have received a copy of the GNU General Public License
+;; along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 ;;; Commentary:
 
 ;; `auto-tab-groups-eyecandy' is a companion minor mode for `auto-tab-groups-mode'.
-;; It gives the the tab bar more modern style, and allows to set icons for tab groups
-;; depending on their name.
+;; It gives the tab bar a more modern style and shows an icon for each tab
+;; group, chosen by the group name.
 
 ;;; Code:
 (require 'tab-bar)
@@ -42,7 +58,9 @@ Each element is a cons cell:
   :type 'function)
 
 (defun auto-tab-goups--format-spacer (&optional width)
-  "Return a single space to use in `tab-bar-format'."
+  "Return a `tab-bar-format' item that inserts a space of WIDTH.
+WIDTH is a factor of the normal space width, as in the `space-width'
+display property.  It defaults to the normal width."
   (lambda nil (propertize " " 'display `(space-width ,width))))
 
 (defcustom auto-tab-groups-eyecandy-tab-bar-format
@@ -53,7 +71,7 @@ Each element is a cons cell:
     ,(auto-tab-goups--format-spacer 0.1)
     tab-bar-format-menu-bar
     ,(auto-tab-goups--format-spacer 0.75))
-  "List of tab bar items. See `tab-bar-format' for datails."
+  "List of tab bar items.  See `tab-bar-format' for datails."
   :type 'hook)
 
 (defun auto-tab-groups-eyecandy--get-bar-image (height width color)
@@ -83,7 +101,7 @@ Inspired from nerd-icons-corfu: https://github.com/LuigiPiucco/nerd-icons-corfu/
 
 (defun auto-tab-groups-eyecandy--get-group-icon (tab-group-name)
   "Retrieve the icon for the given TAB-GROUP-NAME."
-  (if-let ((tab-group-icon-spec
+  (if-let* ((tab-group-icon-spec
             (cdr (seq-find (lambda (data)
                              (let ((tab-group-name-re (car data)))
                                (string-match tab-group-name-re tab-group-name)))
@@ -93,10 +111,9 @@ Inspired from nerd-icons-corfu: https://github.com/LuigiPiucco/nerd-icons-corfu/
         tab-group-icon-spec)
     (auto-tab-groups-eyecandy--nerd-icon auto-tab-groups-eyecandy-default-icon)))
 
-(defun auto-tab-groups-eyecandy--tab-bar-tab-group-format-function (tab _ &optional current-p)
-  "Format the tab group name for TAB-BAR.
-TAB is the tab object, I is the tab index,
- and CURRENT-P indicates if the tab is selected."
+(defun auto-tab-groups-eyecandy--tab-bar-tab-group-format-function (tab _index &optional current-p)
+  "Format the group name of TAB for the tab bar.
+CURRENT-P is non-nil when TAB is the selected one."
   (let* ((tab-group-name (funcall tab-bar-tab-group-function tab))
          (tab-group-face (if current-p 'tab-bar-tab-group-current 'tab-bar-tab-group-inactive))
          (color (face-foreground (if current-p 'mode-line-emphasis 'shadow)))

@@ -6,11 +6,27 @@
 ;; Version: 0.2
 ;; Package-Requires: ((emacs "28.1"))
 ;; Keywords: convenience, tabs
+;; URL: https://github.com/MArpogaus/auto-tab-groups
+
+;; This file is not part of GNU Emacs.
+
+;; This program is free software: you can redistribute it and/or modify
+;; it under the terms of the GNU General Public License as published by
+;; the Free Software Foundation, either version 3 of the License, or
+;; (at your option) any later version.
+
+;; This program is distributed in the hope that it will be useful,
+;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;; GNU General Public License for more details.
+
+;; You should have received a copy of the GNU General Public License
+;; along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 ;;; Commentary:
 
 ;; `auto-tab-groups-mode' allows you to automatically create and manage
-;; tab groups based on specific Emacs commands. It switches to existing
+;; tab groups based on specific Emacs commands.  It switches to existing
 ;; tab groups or creates new ones based on user-defined configurations.
 ;; The mode can also delete tab groups when specific commands are invoked.
 ;; This work has been heavily inspired by [[https://github.com/fritzgrabo/project-tab-groups][project-tab-groups.el]]
@@ -29,15 +45,15 @@ Each element should be a cons cell:
 - CAR: Command (symbol) or list of commands.
 - CDR: Group specification, which can be:
   - A string: Name of the tab group.
-  - A function: Called to dynamically determine the group name. Its result
-                should be a string. If `:ignore-result' is nil, the command's
-                result will be passed as argument to this function. Otherwise
+  - A function: Called to dynamically determine the group name.  Its result
+                should be a string.  If `:ignore-result' is nil, the command's
+                result will be passed as argument to this function.  Otherwise
                 the command is called first, the result passed to the function
                 and then the tab group is created.
-  - A plist: Provides additional options. Currently supported properties:
+  - A plist: Provides additional options.  Currently supported properties:
     - `:tab-group-name': Group name (string) or a function returning a string.
     - `:ignore-result':  If non-nil and value is a function, command's result is
-                         passed to the function. If nil, the tab group is
+                         passed to the function.  If nil, the tab group is
                          created before the command is run.
 
 Example:
@@ -60,12 +76,12 @@ Each element should be a cons cell:
 - CAR: Command (symbol) or list of commands.
 - CDR: Group specification, which can be:
   - A string: Name of the tab group.
-  - A function: Called to determine the tab group name. Its result should be a
+  - A function: Called to determine the tab group name.  Its result should be a
                 string.
-  - A plist: Provides additional options. Currently supported properties:
+  - A plist: Provides additional options.  Currently supported properties:
     - `:tab-group-name': Group name (string) or a function returning a string.
     - `:ignore-result':  If non-nil, the tab group will be closed regardless of
-                         the command's result. If nil, the group is only closed
+                         the command's result.  If nil, the group is only closed
                          if the command returns non-nil.
 
 Example:
@@ -132,14 +148,14 @@ Refer to `tab-bar-new-tab-choice' for details."
 (defun auto-tab-groups--switch-or-create-tab-group (tab-group-name)
   "Switch to or create a tab group with the name TAB-GROUP-NAME."
   (when tab-group-name
-    (if-let ((existing-tab (auto-tab-groups--find-tab-by-group-name tab-group-name)))
+    (if-let* ((existing-tab (auto-tab-groups--find-tab-by-group-name tab-group-name)))
         (auto-tab-groups--switch-tab-group existing-tab)
       (auto-tab-groups-new-group tab-group-name))))
 
 (defun auto-tab-groups--close-tab-group (tab-group-name)
   "Close the tab group with the name TAB-GROUP-NAME."
   (run-hooks 'auto-tab-groups-before-delete-hook)
-  (when-let ((tab (auto-tab-groups--find-tab-by-group-name tab-group-name)))
+  (when-let* ((tab (auto-tab-groups--find-tab-by-group-name tab-group-name)))
     (tab-bar-close-group-tabs tab-group-name))
   (when auto-tab-groups-echo-mode
     (message "Closed tab group: %s" tab-group-name))
@@ -190,7 +206,7 @@ Refer to `tab-bar-new-tab-choice' for details."
     (tab-group (if tab-group-name tab-group-name auto-tab-groups-initial-group-name))))
 
 (defun auto-tab-groups--advice-add (kind command-data)
-  "Add advice to commands in COMMAND-DATA."
+  "Add advice of KIND to the commands in COMMAND-DATA."
   (let ((tab-group-spec (auto-tab-groups--get-group-spec command-data))
         (get-advice-fun (intern (format "auto-tab-groups--get-%s-advice" (symbol-name kind)))))
     (dolist (command (if (listp (car command-data))
@@ -199,7 +215,7 @@ Refer to `tab-bar-new-tab-choice' for details."
       (advice-add command :around (funcall get-advice-fun tab-group-spec)))))
 
 (defun auto-tab-groups--advice-remove (kind command-data)
-  "Remove advice from commands in COMMAND-DATA."
+  "Remove advice of KIND from the commands in COMMAND-DATA."
   (let ((tab-group-spec (auto-tab-groups--get-group-spec command-data))
         (get-advice-fun (intern (format "auto-tab-groups--get-%s-advice" (symbol-name kind)))))
     (dolist (command (if (listp (car command-data))
