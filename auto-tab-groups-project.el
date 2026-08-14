@@ -3,7 +3,7 @@
 ;; Copyright (C) 2026 Marcel Arpogaus
 
 ;; Author: Marcel Arpogaus <znepry.necbtnhf@tznvy.pbz>
-;; Version: 0.2
+;; Version: 0.3
 ;; Package-Requires: ((emacs "29.1"))
 ;; Keywords: convenience, tabs
 ;; URL: https://github.com/MArpogaus/auto-tab-groups
