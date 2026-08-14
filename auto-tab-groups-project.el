@@ -40,6 +40,20 @@
               (project (project-current nil dir)))
     (project-name project)))
 
+(defun auto-tab-groups-project--directory (thing)
+  "Return the directory THING stands for, or nil.
+Each command hands over what it returned, and the three of them
+return three different things: `project-prompt-project-dir' a
+directory, `project-switch-to-buffer' a buffer, and
+`project-prompt-project-name' the name of a known project."
+  (cond ((bufferp thing) (buffer-local-value 'default-directory thing))
+        ((not (stringp thing)) nil)
+        ((file-directory-p thing) thing)
+        (t (seq-find (lambda (root)
+                       (equal (auto-tab-groups-project--get-project-name root)
+                              thing))
+                     (mapcar #'expand-file-name (project-known-project-roots))))))
+
 (defun auto-tab-groups-project--get-project-type (dir)
   "Return the type of the project in DIR."
   (when-let* ((project (if (and dir (stringp dir)) (project-current nil dir)
@@ -74,11 +88,14 @@ name function needs the directory, which is gone once the buffers are."
   (auto-tab-groups--advice-remove 'close auto-tab-groups-project--close-commands))
 
 ;;;###autoload
-(defun auto-tab-groups-project-group-name (dir)
-  "Return the tab group name for the project in DIR."
-  (if-let* ((project-name (auto-tab-groups-project--get-project-name dir))
-            (project-type (auto-tab-groups-project--get-project-type dir)))
-      (format "[%c] %s" project-type project-name)))
+(defun auto-tab-groups-project-group-name (thing)
+  "Return the tab group name for the project THING belongs to.
+THING is what the command returned: a directory, a buffer, or the
+name of a known project."
+  (when-let* ((dir (auto-tab-groups-project--directory thing))
+              (project-name (auto-tab-groups-project--get-project-name dir))
+              (project-type (auto-tab-groups-project--get-project-type dir)))
+    (format "[%c] %s" project-type project-name)))
 
 ;;;###autoload
 (define-minor-mode auto-tab-groups-project-mode

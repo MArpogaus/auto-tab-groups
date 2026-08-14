@@ -206,8 +206,9 @@ Every project then gets a tab group named after it, created when you
 switch to the project and closed by =project-kill-buffers=.  The name
 comes from =auto-tab-groups-project-group-name=, which is also usable
 as the group name function in your own
-=auto-tab-groups-create-commands= rules.  The mode offers no options
-of its own.
+=auto-tab-groups-create-commands= rules: it takes whatever the command
+returned, which may be a directory, a buffer or the name of a known
+project.  The mode offers no options of its own.
 
 *** auto-tab-groups-eyecandy
 

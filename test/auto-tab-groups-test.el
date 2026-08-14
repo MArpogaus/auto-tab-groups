@@ -137,5 +137,29 @@ advice carries a name; without it the advice would stay behind."
   "Without a project there is no group name."
   (should-not (auto-tab-groups-project-group-name "/does/not/exist/")))
 
+(ert-deftest auto-tab-groups-test-project-group-name-from-any-return-value ()
+  "The name comes out for all three things the commands return.
+`project-prompt-project-dir' returns a directory,
+`project-switch-to-buffer' a buffer and `project-prompt-project-name'
+the name of a known project.  Only the directory used to work, so
+switching to a buffer of another project left the tab in the group of
+the project one came from."
+  (let* ((dir (file-name-as-directory (make-temp-file "auto-tab-groups-" t)))
+         (project-find-functions (list (lambda (d) (cons 'transient d))))
+         (name (project-name (cons 'transient dir)))
+         (expected (format "[P] %s" name)))
+    (unwind-protect
+        (cl-letf (((symbol-function 'project-known-project-roots)
+                   (lambda () (list dir))))
+          (should (equal (auto-tab-groups-project-group-name dir) expected))
+          (with-temp-buffer
+            (setq default-directory dir)
+            (should (equal (auto-tab-groups-project-group-name (current-buffer))
+                           expected)))
+          (should (equal (auto-tab-groups-project-group-name name) expected))
+          ;; a name nobody knows still answers with nothing
+          (should-not (auto-tab-groups-project-group-name "no such project")))
+      (delete-directory dir t))))
+
 (provide 'auto-tab-groups-test)
 ;;; auto-tab-groups-test.el ends here
