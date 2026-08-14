@@ -5,7 +5,9 @@
 [[https://github.com/MArpogaus/auto-tab-groups/network/members][https://img.shields.io/github/forks/MArpogaus/auto-tab-groups.svg?style=flat-square]]
 [[https://github.com/MArpogaus/auto-tab-groups/stargazers][https://img.shields.io/github/stars/MArpogaus/auto-tab-groups.svg?style=flat-square]]
 [[https://github.com/MArpogaus/auto-tab-groups/issues][https://img.shields.io/github/issues/MArpogaus/auto-tab-groups.svg?style=flat-square]]
-[[https://github.com/MArpogaus/auto-tab-groups/blob/main/LICENSE][https://img.shields.io/github/license/MArpogaus/auto-tab-groups.svg?style=flat-square]]
+[[https://github.com/MArpogaus/auto-tab-groups/blob/dev/COPYING][https://img.shields.io/github/license/MArpogaus/auto-tab-groups.svg?style=flat-square]]
+[[https://github.com/MArpogaus/auto-tab-groups/actions/workflows/test.yml][https://img.shields.io/github/actions/workflow/status/MArpogaus/auto-tab-groups/test.yml?branch=main&style=flat-square&label=tests]]
+[[https://melpa.org/#/auto-tab-groups][https://melpa.org/packages/auto-tab-groups-badge.svg?style=flat-square]]
 [[https://linkedin.com/in/MArpogaus][https://img.shields.io/badge/-LinkedIn-black.svg?style=flat-square&logo=linkedin&colorB=555]]
 
 * auto tab groups :TOC_3_gh:noexport:
@@ -13,6 +15,7 @@
   - [[#getting-started][Getting Started]]
     - [[#prerequisites][Prerequisites]]
     - [[#installation][Installation]]
+    - [[#from-melpa][From MELPA]]
   - [[#usage][Usage]]
   - [[#customization][Customization]]
     - [[#auto-tab-groups][auto-tab-groups]]
@@ -44,10 +47,21 @@ Result with the example configuration provided below:
 
 *** Prerequisites
 
-- Emacs 28.1 or later, including =tab-bar.el= and =project.el=.
-- optionally =nerd-icons= for build id "eye-candy" mode
+- Emacs 29.1 or later, including =tab-bar.el= and =project.el=.
+- optionally =nerd-icons= for build in "eye-candy" mode
 
 *** Installation
+
+**** From MELPA
+
+Once the package is on MELPA, install it with the built in package manager:
+
+#+begin_src emacs-lisp
+  (use-package auto-tab-groups
+    :ensure t
+    ;; ...
+    )
+#+end_src
 
 **** Complete configuration example using =straight.el=
 
@@ -171,14 +185,18 @@ This mode dos currently not offer any customization.
 
 *** auto-tab-groups-eyecandy
 
+*Note:* This packages requires a minimum emacs version of =29.1= or higher for icon support.
+
 The =auto-tab-groups-eyecandy= minor mode provides additional customization options for enhanced tab bar styling:
 
 
-| Option                                | Type   | Description                   |
-|---------------------------------------+--------+-------------------------------|
-| =auto-tab-groups-eyecandy-icons=        | alist  | Map tab group names to icons. |
-| =auto-tab-groups-eyecandy-tab-height=   | number | Tab height in pixels.         |
-| =auto-tab-groups-eyecandy-default-icon= | string | Default icon for tab groups.  |
+| Option                                                      | Type     | Description                              |
+|-------------------------------------------------------------+----------+------------------------------------------|
+| =auto-tab-groups-eyecandy-icons=                              | alist    | Map tab group names to icons.            |
+| =auto-tab-groups-eyecandy-tab-height=                         | number   | Tab height in pixels.                    |
+| =auto-tab-groups-eyecandy-default-icon=                       | string   | Default icon for tab groups.             |
+| =auto-tab-groups-eyecandy-tab-bar-format=                     | list     | List of tab bar elements to use.         |
+| =auto-tab-groups-eyecandy-tab-bar-group-name-format-function= | function | Custom function to alter the group name. |
 
 =auto-tab-groups-eyecandy-icons= is an alist where:
 
