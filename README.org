@@ -66,6 +66,27 @@ Once the package is on MELPA, install it with the built in package manager:
     )
 #+end_src
 
+**** Minimal working example
+
+Every project gets its own tab group, and the modern tab style is one
+mode away — the demo above runs on exactly this:
+
+#+begin_src emacs-lisp
+  (use-package auto-tab-groups
+    :ensure t
+    :init
+    ;; A tab group per project, created on `project-switch-project'.
+    (auto-tab-groups-project-mode)
+    ;; The modern tab style.  Icons come from nerd-icons when it is
+    ;; installed; plain strings work as well:
+    ;; (auto-tab-groups-eyecandy-icons '(("HOME" . "⌂")))
+    (auto-tab-groups-eyecandy-mode)
+    (auto-tab-groups-mode))
+#+end_src
+
+Switch to a project with =C-x p p= and its tab group appears; kill the
+project's buffers with =C-x p k= and the group closes.
+
 **** Complete configuration example using =straight.el=
 
 #+begin_src emacs-lisp
