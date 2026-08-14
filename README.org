@@ -6,7 +6,7 @@
 [[https://github.com/MArpogaus/auto-tab-groups/stargazers][https://img.shields.io/github/stars/MArpogaus/auto-tab-groups.svg?style=flat-square]]
 [[https://github.com/MArpogaus/auto-tab-groups/issues][https://img.shields.io/github/issues/MArpogaus/auto-tab-groups.svg?style=flat-square]]
 [[https://github.com/MArpogaus/auto-tab-groups/blob/dev/COPYING][https://img.shields.io/github/license/MArpogaus/auto-tab-groups.svg?style=flat-square]]
-[[https://github.com/MArpogaus/auto-tab-groups/actions/workflows/test.yml][https://img.shields.io/github/actions/workflow/status/MArpogaus/auto-tab-groups/test.yml?style=flat-square&label=tests]]
+[[https://github.com/MArpogaus/auto-tab-groups/actions/workflows/test.yml][https://img.shields.io/github/actions/workflow/status/MArpogaus/auto-tab-groups/test.yml?branch=dev&style=flat-square&label=tests]]
 [[https://melpa.org/#/auto-tab-groups][https://melpa.org/packages/auto-tab-groups-badge.svg?style=flat-square]]
 [[https://linkedin.com/in/MArpogaus][https://img.shields.io/badge/-LinkedIn-black.svg?style=flat-square&logo=linkedin&colorB=555]]
 
