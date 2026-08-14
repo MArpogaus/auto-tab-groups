@@ -37,40 +37,48 @@
   "Modern tab bar."
   :group 'auto-tab-groups)
 
-(defcustom auto-tab-groups-eyecandy-icons '(("HOME" . '(:style "suc" :icon "custom-emacs")))
-  "Alist mapping commands to corresponding tab group names/functions.
+(defcustom auto-tab-groups-eyecandy-icons
+  '(("HOME" :style "suc" :icon "custom-emacs"))
+  "Alist mapping tab group names to icons.
 Each element is a cons cell:
-  - CAR: Command (symbol) or list of commands.
-  - CDR: String (group name) or function returning a string."
-  :type '(alist :key-type (choice symbol (repeat symbol))
-                :value-type (choice string function)))
+  - CAR: Regular expression matched against the tab group name.
+  - CDR: Either a string shown as is, or a nerd-icons specification,
+         a plist with the keys `:style' and `:icon'.
+
+The first matching element wins.  Group names without a match get
+`auto-tab-groups-eyecandy-default-icon'."
+  :type '(alist :key-type regexp
+                :value-type (choice string (plist :key-type symbol
+                                                  :value-type string))))
 
 (defcustom auto-tab-groups-eyecandy-tab-height 25
   "Height of the tab bar tabs in pixels."
   :type 'number)
 
 (defcustom auto-tab-groups-eyecandy-default-icon '(:style "oct" :icon "dot_fill")
-  "Default icon displayed for tab groups."
-  :type 'string)
+  "Icon shown for tab groups that match no entry in the icon alist.
+See `auto-tab-groups-eyecandy-icons' for the alist and for the
+accepted icon values."
+  :type '(choice string (plist :key-type symbol :value-type string)))
 
 (defcustom auto-tab-groups-eyecandy-tab-bar-group-name-format-function nil
   "Function to format the tab-group-name."
   :type 'function)
 
-(defun auto-tab-goups--format-spacer (&optional width)
+(defun auto-tab-groups-eyecandy--format-spacer (&optional width)
   "Return a `tab-bar-format' item that inserts a space of WIDTH.
 WIDTH is a factor of the normal space width, as in the `space-width'
 display property.  It defaults to the normal width."
-  (lambda nil (propertize " " 'display `(space-width ,width))))
+  (lambda () (propertize " " 'display `(space-width ,width))))
 
 (defcustom auto-tab-groups-eyecandy-tab-bar-format
   `(tab-bar-format-tabs-groups
     auto-tab-groups-new-group--tab-bar-format-new
     tab-bar-format-align-right
     tab-bar-format-global
-    ,(auto-tab-goups--format-spacer 0.1)
+    ,(auto-tab-groups-eyecandy--format-spacer 0.1)
     tab-bar-format-menu-bar
-    ,(auto-tab-goups--format-spacer 0.75))
+    ,(auto-tab-groups-eyecandy--format-spacer 0.75))
   "List of tab bar items.  See `tab-bar-format' for datails."
   :type 'hook)
 
@@ -111,7 +119,8 @@ Inspired from nerd-icons-corfu: https://github.com/LuigiPiucco/nerd-icons-corfu/
         tab-group-icon-spec)
     (auto-tab-groups-eyecandy--nerd-icon auto-tab-groups-eyecandy-default-icon)))
 
-(defun auto-tab-groups-eyecandy--tab-bar-tab-group-format-function (tab _index &optional current-p)
+(defun auto-tab-groups-eyecandy--tab-bar-tab-group-format-function
+    (tab _index &optional current-p)
   "Format the group name of TAB for the tab bar.
 CURRENT-P is non-nil when TAB is the selected one."
   (let* ((tab-group-name (funcall tab-bar-tab-group-function tab))

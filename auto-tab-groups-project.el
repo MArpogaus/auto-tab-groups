@@ -4,7 +4,7 @@
 
 ;; Author: Marcel Arpogaus <znepry.necbtnhf@tznvy.pbz>
 ;; Version: 0.2
-;; Package-Requires: ((emacs "28.1"))
+;; Package-Requires: ((emacs "29.1"))
 ;; Keywords: convenience, tabs
 ;; URL: https://github.com/MArpogaus/auto-tab-groups
 
@@ -46,10 +46,10 @@
     (if (file-remote-p project-root) ?T ?P)))
 
 (defvar auto-tab-groups-project--create-commands
-  '((project-prompt-project-dir project-prompt-project-name project-switch-to-buffer) . auto-tab-groups-group-name-project))
+  '((project-prompt-project-dir project-prompt-project-name project-switch-to-buffer) . auto-tab-groups-project-group-name))
 
 (defvar auto-tab-groups-project--close-commands
-  '(project-kill-buffers . auto-tab-groups-group-name-project))
+  '(project-kill-buffers . auto-tab-groups-project-group-name))
 
 (defun auto-tab-groups-project--project-kill-buffers-advice (orig-fun &rest args)
   "Return the root of the current project when ORIG-FUN killed its buffers.
@@ -57,7 +57,7 @@ ORIG-FUN is `project-kill-buffers', ARGS its arguments.  The tab group
 name function needs the directory, which is gone once the buffers are."
   (when-let* ((project (project-current t))
               (dir (project-root project)))
-    (when (funcall orig-fun args) dir)))
+    (when (apply orig-fun args) dir)))
 
 (defun auto-tab-groups-project--setup ()
   "Perform configurations necessary for `auto-tab-groups-project-mode'."
@@ -72,7 +72,7 @@ name function needs the directory, which is gone once the buffers are."
   (auto-tab-groups--advice-remove 'close auto-tab-groups-project--close-commands))
 
 ;;;###autoload
-(defun auto-tab-groups-group-name-project (dir)
+(defun auto-tab-groups-project-group-name (dir)
   "Return the tab group name for the project in DIR."
   (if-let* ((project-name (auto-tab-groups-project--get-project-name dir))
             (project-type (auto-tab-groups-project--get-project-type dir)))
