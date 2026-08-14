@@ -59,7 +59,25 @@
                  "group"))
   (should (plist-get (auto-tab-groups--get-group-spec
                       '(cmd "group" :ignore-result t))
-                     :ignore-result)))
+                     :ignore-result))
+  ;; the plist form from the docstring examples
+  (should (equal (auto-tab-groups--get-group-spec
+                  '(cmd :tab-group-name "group" :ignore-result t))
+                 '(:tab-group-name "group" :ignore-result t)))
+  ;; a lambda is a spec, and in interpreted code also a list
+  (let ((spec (auto-tab-groups--get-group-spec
+               (cons 'cmd (lambda () "dyn")))))
+    (should (functionp (plist-get spec :tab-group-name)))))
+
+(ert-deftest auto-tab-groups-test-group-spec-copies ()
+  "Normalizing never modifies the user's customization data."
+  (let ((user (list "group" :ignore-result t)))
+    (auto-tab-groups--get-group-spec (cons 'cmd user))
+    (should (equal user '("group" :ignore-result t))))
+  (let ((user (list :tab-group-name "group")))
+    (plist-put (auto-tab-groups--get-group-spec (cons 'cmd user))
+               :ignore-result t)
+    (should (equal user '(:tab-group-name "group")))))
 
 (ert-deftest auto-tab-groups-test-commands ()
   "Both a single command and a list of commands are accepted."

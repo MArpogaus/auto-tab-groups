@@ -139,14 +139,25 @@ Refer to `tab-bar-new-tab-choice' for details."
             (funcall tab-bar-tabs-function)))
 
 (defun auto-tab-groups--get-group-spec (command-data)
-  "Return valid group specification for the given COMMAND-DATA.
+  "Return the group specification of COMMAND-DATA as a plist.
 
-  The returned plist contains:
-  `:tab-group-name' - The group name (string or function).
-  `:ignore-result' - Whether to ignore the command's result (boolean)."
-  (let ((groups-spec (cdr command-data)))
-    (if (nlistp groups-spec) (list :tab-group-name groups-spec)
-      (plist-put (cdr groups-spec) :tab-group-name (car groups-spec)))))
+The returned plist contains:
+`:tab-group-name' - The group name (string or function).
+`:ignore-result' - Whether to ignore the command's result (boolean).
+
+The result is a fresh list: the input belongs to the user's
+customization and may not be modified."
+  (let ((spec (cdr command-data)))
+    (cond
+     ;; a bare name or a function, `(command . "name")'
+     ((or (nlistp spec) (functionp spec))
+      (list :tab-group-name spec))
+     ;; already a plist, `(command :tab-group-name "name" ...)'
+     ((keywordp (car spec))
+      (copy-sequence spec))
+     ;; name first, `(command "name" :ignore-result t)'
+     (t
+      (append (list :tab-group-name (car spec)) (cdr spec))))))
 
 (defun auto-tab-groups--switch-tab-group (tab)
   "Switch to TAB, the first tab of the wanted tab group."
@@ -162,17 +173,14 @@ Refer to `tab-bar-new-tab-choice' for details."
       (auto-tab-groups-new-group tab-group-name))))
 
 (defun auto-tab-groups--close-tab-group (tab-group-name)
-  "Close the tab group with the name TAB-GROUP-NAME."
-  (run-hooks 'auto-tab-groups-before-delete-hook)
-  (when-let* ((tab (auto-tab-groups--find-tab-by-group-name tab-group-name)))
-    (tab-bar-close-group-tabs tab-group-name))
-  (when auto-tab-groups-echo-mode
-    (message "Closed tab group: %s" tab-group-name))
-  (run-hooks 'auto-tab-groups-after-delete-hook))
-
-(defun auto-tab-groups--get-command-name (orig-fun)
-  "Return the symbol name of ORIG-FUN."
-  (if (subrp orig-fun) (intern (subr-name orig-fun)) orig-fun))
+  "Close the tab group with the name TAB-GROUP-NAME.
+Nothing happens when no such group exists."
+  (when (auto-tab-groups--find-tab-by-group-name tab-group-name)
+    (run-hooks 'auto-tab-groups-before-delete-hook)
+    (tab-bar-close-group-tabs tab-group-name)
+    (when auto-tab-groups-echo-mode
+      (message "Closed tab group: %s" tab-group-name))
+    (run-hooks 'auto-tab-groups-after-delete-hook)))
 
 (defun auto-tab-groups--get-create-advice (tab-group-spec)
   "Get advice function to handle tab group creation based on TAB-GROUP-SPEC."

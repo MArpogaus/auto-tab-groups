@@ -118,17 +118,20 @@ Inspired from nerd-icons-corfu: https://github.com/LuigiPiucco/nerd-icons-corfu/
                       (concat "nf-"  style "-" icon))))
     (or (and (fboundp icon-fun) (funcall icon-fun icon-name)) "?")))
 
+(defun auto-tab-groups-eyecandy--icon (icon-spec)
+  "Return ICON-SPEC as the string that shows in the tab bar.
+A string stands for itself; a plist names a nerd icon."
+  (if (listp icon-spec)
+      (auto-tab-groups-eyecandy--nerd-icon icon-spec)
+    icon-spec))
+
 (defun auto-tab-groups-eyecandy--get-group-icon (tab-group-name)
   "Retrieve the icon for the given TAB-GROUP-NAME."
-  (if-let* ((tab-group-icon-spec
-            (cdr (seq-find (lambda (data)
-                             (let ((tab-group-name-re (car data)))
-                               (string-match tab-group-name-re tab-group-name)))
-                           auto-tab-groups-eyecandy-icons))))
-      (if (listp tab-group-icon-spec)
-          (auto-tab-groups-eyecandy--nerd-icon tab-group-icon-spec)
-        tab-group-icon-spec)
-    (auto-tab-groups-eyecandy--nerd-icon auto-tab-groups-eyecandy-default-icon)))
+  (auto-tab-groups-eyecandy--icon
+   (or (cdr (seq-find (lambda (data)
+                        (string-match-p (car data) tab-group-name))
+                      auto-tab-groups-eyecandy-icons))
+       auto-tab-groups-eyecandy-default-icon)))
 
 (defun auto-tab-groups-eyecandy--tab-bar-tab-group-format-function
     (tab _index &optional current-p)
@@ -185,9 +188,10 @@ TAB is the tab object and I is the tab index."
         tab-bar-tab-name-format-function #'auto-tab-groups-eyecandy--tab-bar-tab-name-format-function))
 
 (defun auto-tab-groups-eyecandy--teardown ()
-  "Remove advice from defined commands."
-  (when (>= emacs-major-version 29)
-    (tab-bar--load-buttons))
+  "Give the tab bar its stock look back."
+  ;; There is no public way to restore the stock buttons; this is the
+  ;; function that created them.
+  (tab-bar--load-buttons)
   (dolist (s '(tab-bar-separator
                tab-bar-auto-width
                tab-bar-tab-group-format-function
@@ -197,7 +201,7 @@ TAB is the tab object and I is the tab index."
 
 ;;;###autoload
 (define-minor-mode auto-tab-groups-eyecandy-mode
-  "Minor mode for automatic tab group management on command execution."
+  "Give the tab bar a modern style, with an icon for each tab group."
   :global t
   :group 'auto-tab-groups-eyecandy
   (if auto-tab-groups-eyecandy-mode

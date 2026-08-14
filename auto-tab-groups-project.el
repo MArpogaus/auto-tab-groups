@@ -35,8 +35,9 @@
 (require 'auto-tab-groups)
 
 (defun auto-tab-groups-project--get-project-name (dir)
-  "Return the name for the project in DIR or the current project if DIR is nil."
-  (when-let* ((project (if (and dir (stringp dir)) (project--find-in-directory dir))))
+  "Return the name of the project in DIR, or nil."
+  (when-let* (((stringp dir))
+              (project (project-current nil dir)))
     (project-name project)))
 
 (defun auto-tab-groups-project--get-project-type (dir)
