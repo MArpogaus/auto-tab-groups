@@ -7,7 +7,6 @@
 [[https://github.com/MArpogaus/auto-tab-groups/issues][https://img.shields.io/github/issues/MArpogaus/auto-tab-groups.svg?style=flat-square]]
 [[https://github.com/MArpogaus/auto-tab-groups/blob/dev/COPYING][https://img.shields.io/github/license/MArpogaus/auto-tab-groups.svg?style=flat-square]]
 [[https://github.com/MArpogaus/auto-tab-groups/actions/workflows/test.yml][https://img.shields.io/github/actions/workflow/status/MArpogaus/auto-tab-groups/test.yml.svg?branch=main&label=tests&style=flat-square]]
-[[https://melpa.org/#/auto-tab-groups][https://melpa.org/packages/auto-tab-groups-badge.svg?style=flat-square]]
 [[https://linkedin.com/in/MArpogaus][https://img.shields.io/badge/-LinkedIn-black.svg?style=flat-square&logo=linkedin&colorB=555]]
 
 * auto tab groups :TOC_3_gh:noexport:
@@ -181,6 +180,9 @@ You can customize the behavior of =auto-tab-groups= using the following options:
 | =auto-tab-groups-before-delete-hook= | hook     | Hook run before tab group deletion.                  |
 | =auto-tab-groups-after-delete-hook=  | hook     | Hook run after tab group deletion.                   |
 
+=auto-tab-groups-echo-mode= prints a message in the echo area whenever
+a tab group is created, switched to or closed.
+
 
 =auto-tab-groups-create-commands= and =auto-tab-groups-close-commands= are alists where:
 
@@ -191,41 +193,43 @@ For =create-commands=, the CDR can be a function that receives the command's res
 The tab group is created if it doesn't exist, otherwise, Emacs switches to it.
 =close-commands= work similarly, closing the specified tab group after the command is run.
 
-*** auto-tab-groups-project 
+*** auto-tab-groups-project
 
-This package provides a minor mode to integrate with =project.el=, similar to [[https://github.com/fritzgrabo/project-tab-groups][project-tab-groups.el]], simply enable it with:
+This companion mode integrates with =project.el=, similar to
+[[https://github.com/fritzgrabo/project-tab-groups][project-tab-groups.el]].  Enable it with:
 
-            #+begin_src emacs-lisp
+#+begin_src emacs-lisp
   (auto-tab-groups-project-mode)
-      #+end_src
+#+end_src
 
-or
-
-            #+begin_src emacs-lisp
-  (setq auto-tab-groups-project-mode 1)
-      #+end_src
-
-This mode dos currently not offer any customization.
+Every project then gets a tab group named after it, created when you
+switch to the project and closed by =project-kill-buffers=.  The name
+comes from =auto-tab-groups-project-group-name=, which is also usable
+as the group name function in your own
+=auto-tab-groups-create-commands= rules.  The mode offers no options
+of its own.
 
 *** auto-tab-groups-eyecandy
 
-*Note:* This packages requires a minimum emacs version of =29.1= or higher for icon support.
+The =auto-tab-groups-eyecandy-mode= minor mode styles the tab bar and
+offers these options:
 
-The =auto-tab-groups-eyecandy= minor mode provides additional customization options for enhanced tab bar styling:
-
-
-| Option                                                      | Type     | Description                              |
-|-------------------------------------------------------------+----------+------------------------------------------|
-| =auto-tab-groups-eyecandy-icons=                              | alist    | Map tab group names to icons.            |
-| =auto-tab-groups-eyecandy-tab-height=                         | number   | Tab height in pixels.                    |
-| =auto-tab-groups-eyecandy-default-icon=                       | string   | Default icon for tab groups.             |
-| =auto-tab-groups-eyecandy-tab-bar-format=                     | list     | List of tab bar elements to use.         |
-| =auto-tab-groups-eyecandy-tab-bar-group-name-format-function= | function | Custom function to alter the group name. |
+| Option                                                      | Type          | Description                              |
+|-------------------------------------------------------------+---------------+------------------------------------------|
+| =auto-tab-groups-eyecandy-icons=                              | alist         | Map tab group names to icons.            |
+| =auto-tab-groups-eyecandy-tab-height=                         | number        | Tab height in pixels.                    |
+| =auto-tab-groups-eyecandy-default-icon=                       | string, plist | Icon for groups without a match.         |
+| =auto-tab-groups-eyecandy-tab-bar-format=                     | list          | List of tab bar elements to use.         |
+| =auto-tab-groups-eyecandy-tab-bar-group-name-format-function= | function      | Custom function to alter the group name. |
 
 =auto-tab-groups-eyecandy-icons= is an alist where:
 
-- CAR: tab group name (string) or predicate function.
-- CDR: icon string.
+- CAR: regular expression, matched against the tab group name.
+- CDR: either a string shown as is, or a nerd-icons specification, a
+  plist with the keys =:style= and =:icon= (requires [[https://github.com/rainstormstudio/nerd-icons.el][nerd-icons]]).
+
+The first matching entry wins.  Icons the frame cannot draw fall back
+to plain characters on their own.
 
 ** Alternative Packages
 
