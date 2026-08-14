@@ -1,11 +1,27 @@
-;;; auto-tab-groups.el --- Simple auto tab group creator for specified commands -*- lexical-binding: t; -*-
+;;; auto-tab-groups-project.el --- Project integration for auto-tab-groups -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2024 Marcel Arpogaus
+;; Copyright (C) 2026 Marcel Arpogaus
 
 ;; Author: Marcel Arpogaus <znepry.necbtnhf@tznvy.pbz>
-;; Version: 0.2
-;; Package-Requires: ((emacs "28.1"))
+;; Version: 0.3
+;; Package-Requires: ((emacs "29.1"))
 ;; Keywords: convenience, tabs
+;; URL: https://github.com/MArpogaus/auto-tab-groups
+
+;; This file is not part of GNU Emacs.
+
+;; This program is free software: you can redistribute it and/or modify
+;; it under the terms of the GNU General Public License as published by
+;; the Free Software Foundation, either version 3 of the License, or
+;; (at your option) any later version.
+
+;; This program is distributed in the hope that it will be useful,
+;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;; GNU General Public License for more details.
+
+;; You should have received a copy of the GNU General Public License
+;; along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 ;;; Commentary:
 
@@ -17,12 +33,12 @@
 (require 'project)
 (require 'auto-tab-groups)
 
-(defun auto-tab-groups-project--get-project-name (&optional dir)
+(defun auto-tab-groups-project--get-project-name (dir)
   "Return the name for the project in DIR or the current project if DIR is nil."
-  (when-let ((project (if (and dir (stringp dir)) (project-current nil dir) (project-current nil))))
+  (when-let* ((project (if (and dir (stringp dir)) (project--find-in-directory dir))))
     (project-name project)))
 
-(defun auto-tab-groups-project--get-project-type (&optional dir)
+(defun auto-tab-groups-project--get-project-type (dir)
   "Return the type of the project in DIR."
   (when-let* ((project (if (and dir (stringp dir)) (project-current nil dir)
                          (project-current nil)))
@@ -30,15 +46,18 @@
     (if (file-remote-p project-root) ?T ?P)))
 
 (defvar auto-tab-groups-project--create-commands
-  '((project-prompt-project-dir project-prompt-project-name project-switch-to-buffer) . auto-tab-groups-group-name-project))
+  '((project-prompt-project-dir project-prompt-project-name project-switch-to-buffer) . auto-tab-groups-project-group-name))
 
 (defvar auto-tab-groups-project--close-commands
-  '(project-kill-buffers . auto-tab-groups-group-name-project))
+  '(project-kill-buffers . auto-tab-groups-project-group-name))
 
 (defun auto-tab-groups-project--project-kill-buffers-advice (orig-fun &rest args)
+  "Return the root of the current project when ORIG-FUN killed its buffers.
+ORIG-FUN is `project-kill-buffers', ARGS its arguments.  The tab group
+name function needs the directory, which is gone once the buffers are."
   (when-let* ((project (project-current t))
               (dir (project-root project)))
-    (when (funcall orig-fun args) dir)))
+    (when (apply orig-fun args) dir)))
 
 (defun auto-tab-groups-project--setup ()
   "Perform configurations necessary for `auto-tab-groups-project-mode'."
@@ -53,7 +72,7 @@
   (auto-tab-groups--advice-remove 'close auto-tab-groups-project--close-commands))
 
 ;;;###autoload
-(defun auto-tab-groups-group-name-project (&optional dir)
+(defun auto-tab-groups-project-group-name (dir)
   "Return the tab group name for the project in DIR."
   (if-let* ((project-name (auto-tab-groups-project--get-project-name dir))
             (project-type (auto-tab-groups-project--get-project-type dir)))
@@ -69,4 +88,4 @@
     (auto-tab-groups-project--teardown)))
 
 (provide 'auto-tab-groups-project)
-;;; auto-tab-groups.el ends here
+;;; auto-tab-groups-project.el ends here
