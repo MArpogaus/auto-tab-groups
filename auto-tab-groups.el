@@ -207,11 +207,16 @@ Nothing happens when no such group exists."
                (shown (current-buffer))
                (tab-group-name (if tab-group-name-functionp (funcall tab-group-name-or-func results)
                                  tab-group-name-or-func))
-               ;; Only when the command showed something and the group
+               ;; Only when the command showed a buffer and the group
                ;; it belongs to is another one.  A command that merely
-               ;; prompts leaves the new tab as it was.
+               ;; prompts leaves the new tab as it was.  It shows one
+               ;; when it hands one over, or when the current buffer
+               ;; changed: switching to the buffer that was current
+               ;; already changes nothing to compare, so the returned
+               ;; buffer is the only sign that anything was shown.
                (carry (and tab-group-name
-                           (not (eq shown buffer))
+                           (or (buffer-live-p results)
+                               (not (eq shown buffer)))
                            (not (equal tab-group-name
                                        (auto-tab-groups--current-group))))))
           (when carry (set-window-configuration windows))

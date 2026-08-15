@@ -147,6 +147,27 @@ back the way it was, and the buffer follows into the new group."
       (kill-buffer home)
       (kill-buffer opened))))
 
+(ert-deftest auto-tab-groups-test-create-advice-carries-a-current-buffer ()
+  "A command that shows the buffer already current carries it too.
+Switching to the current buffer changes nothing to compare before and
+after, so the buffer it hands back is the only sign that it showed
+one at all."
+  (let ((home (get-buffer-create "*auto-tab-groups-test home*"))
+        at-switch)
+    (unwind-protect
+        (cl-letf (((symbol-function 'auto-tab-groups--switch-or-create-tab-group)
+                   (lambda (name) (setq at-switch (cons name (current-buffer)))))
+                  ((symbol-function 'auto-tab-groups--current-group)
+                   (lambda () "the old one")))
+          (switch-to-buffer home)
+          (let ((advice (auto-tab-groups--get-create-advice
+                         (list :tab-group-name (lambda (&rest _) "the new one")))))
+            ;; the command switches to what is current already
+            (funcall advice (lambda () (switch-to-buffer home) home)))
+          (should (equal (car at-switch) "the new one"))
+          (should (eq (current-buffer) home)))
+      (kill-buffer home))))
+
 (ert-deftest auto-tab-groups-test-create-advice-carries-nothing-extra ()
   "A command that showed nothing leaves the new group as it was."
   (let ((home (get-buffer-create "*auto-tab-groups-test home*"))
