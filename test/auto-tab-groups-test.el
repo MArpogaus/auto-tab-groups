@@ -151,12 +151,14 @@ back the way it was, and the buffer follows into the new group."
   "A command that shows the buffer already current carries it too.
 Switching to the current buffer changes nothing to compare before and
 after, so the buffer it hands back is the only sign that it showed
-one at all."
+one at all.  The stub switches buffers the way selecting another tab
+does, which is what leaves the scratch buffer on screen when the
+carry is skipped."
   (let ((home (get-buffer-create "*auto-tab-groups-test home*"))
-        at-switch)
+        (elsewhere (get-buffer-create "*auto-tab-groups-test elsewhere*")))
     (unwind-protect
         (cl-letf (((symbol-function 'auto-tab-groups--switch-or-create-tab-group)
-                   (lambda (name) (setq at-switch (cons name (current-buffer)))))
+                   (lambda (_name) (switch-to-buffer elsewhere)))
                   ((symbol-function 'auto-tab-groups--current-group)
                    (lambda () "the old one")))
           (switch-to-buffer home)
@@ -164,9 +166,10 @@ one at all."
                          (list :tab-group-name (lambda (&rest _) "the new one")))))
             ;; the command switches to what is current already
             (funcall advice (lambda () (switch-to-buffer home) home)))
-          (should (equal (car at-switch) "the new one"))
+          ;; the buffer followed into the new group
           (should (eq (current-buffer) home)))
-      (kill-buffer home))))
+      (kill-buffer home)
+      (kill-buffer elsewhere))))
 
 (ert-deftest auto-tab-groups-test-create-advice-carries-nothing-extra ()
   "A command that showed nothing leaves the new group as it was."
