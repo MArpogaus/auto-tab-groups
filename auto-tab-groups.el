@@ -234,7 +234,11 @@ Nothing happens when no such group exists."
                                (funcall tab-group-name-or-func result)
                              tab-group-name-or-func)))
       (when (or ignore-result result)
-        (auto-tab-groups--close-tab-group tab-group-name)))))
+        (auto-tab-groups--close-tab-group tab-group-name))
+      ;; The advice stands in for the command, so it answers as the
+      ;; command did.  Closing a group is bookkeeping and its value is
+      ;; nobody's business.
+      result)))
 
 (defun auto-tab-groups-new-group--tab-bar-format-new ()
   "Button to add a new tab and assign it to a new group."

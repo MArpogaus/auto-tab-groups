@@ -188,6 +188,19 @@ carry is skipped."
           (should (eq (current-buffer) home)))
       (kill-buffer home))))
 
+(ert-deftest auto-tab-groups-test-close-advice-answers-as-the-command-did ()
+  "The close advice returns what the command returned.
+It stands in for the command everywhere, so a caller that uses the
+answer — `project-kill-buffers\=' among the commands people close on —
+must get the command\='s and not the bookkeeping\='s."
+  (let (closed)
+    (cl-letf (((symbol-function 'auto-tab-groups--close-tab-group)
+               (lambda (name) (setq closed name) nil)))
+      (let ((advice (auto-tab-groups--get-close-advice
+                     '(:tab-group-name "group"))))
+        (should (eq (funcall advice #'auto-tab-groups-test--command) 'result))
+        (should (equal closed "group"))))))
+
 (ert-deftest auto-tab-groups-test-find-tab-by-group-name ()
   "Tabs are found by their group name."
   (cl-letf (((symbol-function 'tab-bar-tabs-function)
