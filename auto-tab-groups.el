@@ -269,7 +269,11 @@ fresh closure, which `advice-remove' could not find again."
   "Advise the commands in COMMAND-DATA to manage tab groups.
 KIND is either the symbol `create' or the symbol `close'."
   (let ((tab-group-spec (auto-tab-groups--get-group-spec command-data))
-        (get-advice-fun (intern (format "auto-tab-groups--get-%s-advice" kind))))
+        ;; Named rather than made from KIND: there are two kinds, and
+        ;; a name that the compiler reads is a name that grep finds.
+        (get-advice-fun (if (eq kind 'create)
+                            #'auto-tab-groups--get-create-advice
+                          #'auto-tab-groups--get-close-advice)))
     (dolist (command (auto-tab-groups--commands command-data))
       (advice-add command :around (funcall get-advice-fun tab-group-spec)
                   `((name . ,(auto-tab-groups--advice-name kind)))))))

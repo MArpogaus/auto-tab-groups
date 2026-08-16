@@ -1,0 +1,118 @@
+#+TITLE: How auto-tab-groups works
+#+OPTIONS: toc:2
+
+This document describes the implementation.  The [[file:../README.org][README]] tells you how
+to use the package.
+
+* The advice around your commands
+
+=auto-tab-groups-mode= puts an =:around= advice on each command in
+=auto-tab-groups-create-commands= and in
+=auto-tab-groups-close-commands=.  The mode removes the advice when
+it goes off.
+
+An advice stands in for the command.  It therefore returns what the
+command returned.  A caller that uses the answer of the command must
+see the answer of the command, and not the answer of the bookkeeping.
+
+** The create advice
+
+The advice has two roads.  =:ignore-result= chooses the road:
+
+- Without =:ignore-result= the command runs first.  The advice then
+  gives the result to the name function and makes the group.  The
+  command has already shown its buffer at that time, and the buffer
+  is in the tab that was current.  The advice therefore saves the
+  window configuration, puts the old tab back, and carries the buffer
+  into the new group.
+- With =:ignore-result= the advice makes the group first and calls
+  the name function with no argument.  The command then runs in the
+  new group.
+
+** The close advice
+
+The advice runs the command and closes the group after it.  It closes
+the group if the command returns a value, or in each case with
+=:ignore-result=.
+
+* How the package finds a group
+
+=auto-tab-groups--find-tab-by-group-name= walks the tabs of the frame
+and returns the first tab with that group name.  The package uses
+this for three things: to switch to a group, to close a group, and to
+report whether a group is there.
+
+=auto-tab-groups--current-group= returns the group of the current
+tab.  The create advice needs it to put the old tab back.
+
+* The project mode
+
+=auto-tab-groups-project-mode= adds =project-switch-project= to the
+create commands and =project-kill-buffers= to the close commands.
+
+=auto-tab-groups-project-group-name= makes the name.  It takes what
+the command returned and finds the directory of the project:
+
+- a string that names a directory, or a known project root
+- a buffer, and the mode then asks the buffer for its directory
+- nothing, and the mode then uses the current project
+
+The mode uses =project-known-project-roots= for a name that is not a
+directory.  A command can return the name of a project rather than
+its root.
+
+* The eyecandy mode
+
+=auto-tab-groups-eyecandy-mode= replaces four things in the tab bar:
+the format, the format function for a tab, the format function for a
+group, and the button for a new tab.  It puts the old values back
+when it goes off.
+
+** The separator
+
+=auto-tab-groups-eyecandy--get-bar-image= makes the bar between the
+groups.  On a graphic display it is a PBM image of one color.  In a
+terminal it is the character =|= with the same color as foreground
+and background.  The idea comes from doom-modeline.
+
+** The icons
+
+=auto-tab-groups-eyecandy--get-group-icon= takes the first entry of
+=auto-tab-groups-eyecandy-icons= whose regular expression matches the
+name of the group.  A string stands for itself.  A plist names an
+icon of nerd-icons.
+
+nerd-icons answers with the glyph, and it does this whether or not
+the frame has the font.  A nerd font glyph without the font is a hex
+box in the tab bar.  The package therefore asks the frame:
+
+- On a graphic display it asks the font with =internal-char-font=.
+  =char-displayable-p= answers for the character set, and not for the
+  font.
+- In a terminal it asks =char-displayable-p=.
+
+The package uses a plain character where the frame has no glyph.
+
+** The spacers
+
+=auto-tab-groups-eyecandy--format-spacer= makes a space of a part of
+the normal width.  It does this with the =space-width= display
+property, and only on a graphic display.  A terminal draws no part of
+a cell, and a plain space says the same there.
+
+* The tests
+
+=make test= runs the batch suite in
+=test/auto-tab-groups-test.el=.  It calls the advice functions with a
+stub in the place of the switch function, and it tests:
+
+- the group specification, in each of its three forms
+- the name function, with and without =:ignore-result=
+- the return value of both advice functions
+- the buffer that the create advice carries into the new group
+- the name of a project group, for each form of the result
+- the icon of a group, with and without a font
+- the spacer, on a graphic display and in a terminal
+
+A batch session has a frame and tabs, so the tab bookkeeping is
+testable without a display.

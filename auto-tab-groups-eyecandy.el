@@ -66,27 +66,33 @@ accepted icon values."
   "Function to format the tab-group-name."
   :type 'function)
 
-(defun auto-tab-groups-eyecandy--format-spacer (&optional width)
-  "Return a `tab-bar-format' item that inserts a space of WIDTH.
-WIDTH is a factor of the normal space width, as in the `space-width'
-display property.  It defaults to the normal width."
-  (lambda ()
-    ;; A terminal draws no fraction of a cell, and one `space-width'
-    ;; item anywhere in the format leaves the whole bar row unpainted
-    ;; there — reserved, and still showing whatever stood in it
-    ;; before.  A plain space says the same thing in a tty.
-    (if (display-graphic-p)
-        (propertize " " 'display `(space-width ,width))
-      " ")))
+(defun auto-tab-groups-eyecandy--spacer (width)
+  "Return a space of WIDTH for the tab bar.
+WIDTH is a factor of the normal width of a space, as in the
+`space-width' display property.  A terminal draws no part of a cell,
+and one `space-width' item in the format leaves the whole row of the
+bar unpainted there.  The row then still shows what stood in it
+before.  A plain space says the same thing in a terminal."
+  (if (display-graphic-p)
+      (propertize " " 'display `(space-width ,width))
+    " "))
+
+(defun auto-tab-groups-eyecandy--thin-spacer ()
+  "Return a thin space for `auto-tab-groups-eyecandy-tab-bar-format'."
+  (auto-tab-groups-eyecandy--spacer 0.1))
+
+(defun auto-tab-groups-eyecandy--wide-spacer ()
+  "Return a wide space for `auto-tab-groups-eyecandy-tab-bar-format'."
+  (auto-tab-groups-eyecandy--spacer 0.75))
 
 (defcustom auto-tab-groups-eyecandy-tab-bar-format
-  `(tab-bar-format-tabs-groups
+  '(tab-bar-format-tabs-groups
     auto-tab-groups-new-group--tab-bar-format-new
     tab-bar-format-align-right
     tab-bar-format-global
-    ,(auto-tab-groups-eyecandy--format-spacer 0.1)
+    auto-tab-groups-eyecandy--thin-spacer
     tab-bar-format-menu-bar
-    ,(auto-tab-groups-eyecandy--format-spacer 0.75))
+    auto-tab-groups-eyecandy--wide-spacer)
   "List of tab bar items.  See `tab-bar-format' for datails."
   :type 'hook)
 

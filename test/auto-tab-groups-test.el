@@ -224,14 +224,18 @@ and without it the tab bar shows a hex box."
   "The tab bar spacer carries no `space-width\=' in a terminal.
 One such item anywhere in the format leaves the whole bar row
 unpainted there, so the row keeps whatever stood in it before."
-  (let ((spacer (auto-tab-groups-eyecandy--format-spacer 0.75)))
-    (cl-letf (((symbol-function 'display-graphic-p) (lambda (&rest _) t)))
-      (should (equal (get-text-property 0 'display (funcall spacer))
-                     '(space-width 0.75))))
-    (cl-letf (((symbol-function 'display-graphic-p) #'ignore))
-      (let ((item (funcall spacer)))
-        (should (equal item " "))
-        (should-not (get-text-property 0 'display item))))))
+  (cl-letf (((symbol-function 'display-graphic-p) (lambda (&rest _) t)))
+    (should (equal (get-text-property
+                    0 'display (auto-tab-groups-eyecandy--wide-spacer))
+                   '(space-width 0.75))))
+  (cl-letf (((symbol-function 'display-graphic-p) #'ignore))
+    (let ((item (auto-tab-groups-eyecandy--wide-spacer)))
+      (should (equal item " "))
+      (should-not (get-text-property 0 'display item))))
+  ;; the format holds the names of the two spacers, so a value from
+  ;; customize can round trip
+  (should (memq 'auto-tab-groups-eyecandy--wide-spacer
+                auto-tab-groups-eyecandy-tab-bar-format)))
 
 (ert-deftest auto-tab-groups-test-find-tab-by-group-name ()
   "Tabs are found by their group name."
