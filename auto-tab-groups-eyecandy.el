@@ -116,7 +116,15 @@ Inspired from nerd-icons-corfu: https://github.com/LuigiPiucco/nerd-icons-corfu/
          (icon-name (if (equal style "suc")
                         (concat "nf-" icon)
                       (concat "nf-"  style "-" icon))))
-    (or (and (fboundp icon-fun) (funcall icon-fun icon-name)) "?")))
+    (or (and (fboundp icon-fun)
+             (let ((glyph (funcall icon-fun icon-name)))
+               ;; nerd-icons answers with the glyph whether or not the
+               ;; frame can draw it, and a nerd font glyph without the
+               ;; font is a hex box in the tab bar.
+               (and (> (length glyph) 0)
+                    (auto-tab-groups-eyecandy--displayable-p (aref glyph 0))
+                    glyph)))
+        "?")))
 
 (defun auto-tab-groups-eyecandy--icon (icon-spec)
   "Return ICON-SPEC as the string that shows in the tab bar.

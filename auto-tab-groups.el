@@ -46,16 +46,17 @@ Each element should be a cons cell:
 - CAR: Command (symbol) or list of commands.
 - CDR: Group specification, which can be:
   - A string: Name of the tab group.
-  - A function: Called to dynamically determine the group name.  Its result
-                should be a string.  If `:ignore-result' is nil, the command's
-                result will be passed as argument to this function.  Otherwise
-                the command is called first, the result passed to the function
-                and then the tab group is created.
+  - A function: Called to determine the group name.  Its result should be a
+                string.  The command runs first and its result is passed to
+                the function, unless `:ignore-result' is non-nil: then the
+                group is created before the command runs and the function is
+                called with no argument.
   - A plist: Provides additional options.  Currently supported properties:
     - `:tab-group-name': Group name (string) or a function returning a string.
-    - `:ignore-result':  If non-nil and value is a function, command's result is
-                         passed to the function.  If nil, the tab group is
-                         created before the command is run.
+    - `:ignore-result':  If non-nil, the tab group is created before the
+                         command runs, and a name function is called with no
+                         argument.  If nil, the command runs first and its
+                         result is passed to a name function.
 
 Example:
 

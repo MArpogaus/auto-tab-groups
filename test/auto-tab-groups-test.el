@@ -31,6 +31,7 @@
 (require 'cl-lib)
 (require 'auto-tab-groups)
 (require 'auto-tab-groups-project)
+(require 'auto-tab-groups-eyecandy)
 
 (defvar auto-tab-groups-test--switched nil
   "Group name the stubbed switch function received.")
@@ -200,6 +201,24 @@ must get the command\='s and not the bookkeeping\='s."
                      '(:tab-group-name "group"))))
         (should (eq (funcall advice #'auto-tab-groups-test--command) 'result))
         (should (equal closed "group"))))))
+
+(ert-deftest auto-tab-groups-test-icon-falls-back-without-the-font ()
+  "A glyph the frame cannot draw comes back as a plain character.
+nerd-icons answers with the glyph whether or not the font is there,
+and without it the tab bar shows a hex box."
+  (cl-letf (((symbol-function 'nerd-icons-mdicon) (lambda (&rest _) "\uf0e7")))
+    (cl-letf (((symbol-function 'auto-tab-groups-eyecandy--displayable-p)
+               (lambda (&rest _) t)))
+      (should (equal (auto-tab-groups-eyecandy--icon
+                      '(:style "md" :icon "flash"))
+                     "\uf0e7")))
+    (cl-letf (((symbol-function 'auto-tab-groups-eyecandy--displayable-p)
+               #'ignore))
+      (should (equal (auto-tab-groups-eyecandy--icon
+                      '(:style "md" :icon "flash"))
+                     "?"))))
+  ;; a plain string icon is nobody's font problem
+  (should (equal (auto-tab-groups-eyecandy--icon "x") "x")))
 
 (ert-deftest auto-tab-groups-test-find-tab-by-group-name ()
   "Tabs are found by their group name."
