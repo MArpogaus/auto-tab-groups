@@ -220,6 +220,19 @@ and without it the tab bar shows a hex box."
   ;; a plain string icon is nobody's font problem
   (should (equal (auto-tab-groups-eyecandy--icon "x") "x")))
 
+(ert-deftest auto-tab-groups-test-spacer-is-plain-in-a-terminal ()
+  "The tab bar spacer carries no `space-width\=' in a terminal.
+One such item anywhere in the format leaves the whole bar row
+unpainted there, so the row keeps whatever stood in it before."
+  (let ((spacer (auto-tab-groups-eyecandy--format-spacer 0.75)))
+    (cl-letf (((symbol-function 'display-graphic-p) (lambda (&rest _) t)))
+      (should (equal (get-text-property 0 'display (funcall spacer))
+                     '(space-width 0.75))))
+    (cl-letf (((symbol-function 'display-graphic-p) #'ignore))
+      (let ((item (funcall spacer)))
+        (should (equal item " "))
+        (should-not (get-text-property 0 'display item))))))
+
 (ert-deftest auto-tab-groups-test-find-tab-by-group-name ()
   "Tabs are found by their group name."
   (cl-letf (((symbol-function 'tab-bar-tabs-function)

@@ -70,7 +70,14 @@ accepted icon values."
   "Return a `tab-bar-format' item that inserts a space of WIDTH.
 WIDTH is a factor of the normal space width, as in the `space-width'
 display property.  It defaults to the normal width."
-  (lambda () (propertize " " 'display `(space-width ,width))))
+  (lambda ()
+    ;; A terminal draws no fraction of a cell, and one `space-width'
+    ;; item anywhere in the format leaves the whole bar row unpainted
+    ;; there — reserved, and still showing whatever stood in it
+    ;; before.  A plain space says the same thing in a tty.
+    (if (display-graphic-p)
+        (propertize " " 'display `(space-width ,width))
+      " ")))
 
 (defcustom auto-tab-groups-eyecandy-tab-bar-format
   `(tab-bar-format-tabs-groups
