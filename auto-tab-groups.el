@@ -306,6 +306,7 @@ KIND is either the symbol `create' or the symbol `close'."
       (auto-tab-groups--setup)
     (auto-tab-groups--teardown)))
 
+;;;###autoload
 (defun auto-tab-groups-new-group (tab-group-name)
   "Create a new tab group with the name TAB-GROUP-NAME."
   (interactive (list (read-string "Group name: ")))
