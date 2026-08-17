@@ -31,6 +31,7 @@
 (require 'cl-lib)
 (require 'auto-tab-groups)
 (require 'auto-tab-groups-project)
+(require 'auto-tab-groups-eyecandy)
 
 (defvar auto-tab-groups-test--switched nil
   "Group name the stubbed switch function received.")
@@ -59,7 +60,25 @@
                  "group"))
   (should (plist-get (auto-tab-groups--get-group-spec
                       '(cmd "group" :ignore-result t))
-                     :ignore-result)))
+                     :ignore-result))
+  ;; the plist form from the docstring examples
+  (should (equal (auto-tab-groups--get-group-spec
+                  '(cmd :tab-group-name "group" :ignore-result t))
+                 '(:tab-group-name "group" :ignore-result t)))
+  ;; a lambda is a spec, and in interpreted code also a list
+  (let ((spec (auto-tab-groups--get-group-spec
+               (cons 'cmd (lambda () "dyn")))))
+    (should (functionp (plist-get spec :tab-group-name)))))
+
+(ert-deftest auto-tab-groups-test-group-spec-copies ()
+  "Normalizing never modifies the user's customization data."
+  (let ((user (list "group" :ignore-result t)))
+    (auto-tab-groups--get-group-spec (cons 'cmd user))
+    (should (equal user '("group" :ignore-result t))))
+  (let ((user (list :tab-group-name "group")))
+    (plist-put (auto-tab-groups--get-group-spec (cons 'cmd user))
+               :ignore-result t)
+    (should (equal user '(:tab-group-name "group")))))
 
 (ert-deftest auto-tab-groups-test-commands ()
   "Both a single command and a list of commands are accepted."
@@ -104,6 +123,120 @@ advice carries a name; without it the advice would stay behind."
       (should (eq (funcall advice #'auto-tab-groups-test--command) 'result))
       (should (equal auto-tab-groups-test--switched "early")))))
 
+(ert-deftest auto-tab-groups-test-create-advice-carries-the-buffer ()
+  "What the command showed goes to the group, and the old tab stays put.
+The group name is only known once the command has run, and by then it
+has shown its buffer in the tab that was current.  So the tab is put
+back the way it was, and the buffer follows into the new group."
+  (let ((home (get-buffer-create "*auto-tab-groups-test home*"))
+        (opened (get-buffer-create "*auto-tab-groups-test opened*"))
+        at-switch)
+    (unwind-protect
+        (cl-letf (((symbol-function 'auto-tab-groups--switch-or-create-tab-group)
+                   (lambda (name) (setq at-switch (cons name (current-buffer)))))
+                  ((symbol-function 'auto-tab-groups--current-group)
+                   (lambda () "the old one")))
+          (switch-to-buffer home)
+          (let ((advice (auto-tab-groups--get-create-advice
+                         (list :tab-group-name (lambda (&rest _) "the new one")))))
+            (funcall advice (lambda () (switch-to-buffer opened) opened)))
+          ;; the group is switched with the old tab as the user left it
+          (should (equal (car at-switch) "the new one"))
+          (should (eq (cdr at-switch) home))
+          ;; and the buffer arrives in the new group afterwards
+          (should (eq (current-buffer) opened)))
+      (kill-buffer home)
+      (kill-buffer opened))))
+
+(ert-deftest auto-tab-groups-test-create-advice-carries-a-current-buffer ()
+  "A command that shows the buffer already current carries it too.
+Switching to the current buffer changes nothing to compare before and
+after, so the buffer it hands back is the only sign that it showed
+one at all.  The stub switches buffers the way selecting another tab
+does, which is what leaves the scratch buffer on screen when the
+carry is skipped."
+  (let ((home (get-buffer-create "*auto-tab-groups-test home*"))
+        (elsewhere (get-buffer-create "*auto-tab-groups-test elsewhere*")))
+    (unwind-protect
+        (cl-letf (((symbol-function 'auto-tab-groups--switch-or-create-tab-group)
+                   (lambda (_name) (switch-to-buffer elsewhere)))
+                  ((symbol-function 'auto-tab-groups--current-group)
+                   (lambda () "the old one")))
+          (switch-to-buffer home)
+          (let ((advice (auto-tab-groups--get-create-advice
+                         (list :tab-group-name (lambda (&rest _) "the new one")))))
+            ;; the command switches to what is current already
+            (funcall advice (lambda () (switch-to-buffer home) home)))
+          ;; the buffer followed into the new group
+          (should (eq (current-buffer) home)))
+      (kill-buffer home)
+      (kill-buffer elsewhere))))
+
+(ert-deftest auto-tab-groups-test-create-advice-carries-nothing-extra ()
+  "A command that showed nothing leaves the new group as it was."
+  (let ((home (get-buffer-create "*auto-tab-groups-test home*"))
+        at-switch)
+    (unwind-protect
+        (cl-letf (((symbol-function 'auto-tab-groups--switch-or-create-tab-group)
+                   (lambda (name) (setq at-switch (cons name (current-buffer)))))
+                  ((symbol-function 'auto-tab-groups--current-group)
+                   (lambda () "the old one")))
+          (switch-to-buffer home)
+          (let ((advice (auto-tab-groups--get-create-advice
+                         (list :tab-group-name (lambda (&rest _) "the new one")))))
+            (funcall advice (lambda () 'a-directory)))
+          (should (equal (car at-switch) "the new one"))
+          (should (eq (current-buffer) home)))
+      (kill-buffer home))))
+
+(ert-deftest auto-tab-groups-test-close-advice-answers-as-the-command-did ()
+  "The close advice returns what the command returned.
+It stands in for the command everywhere, so a caller that uses the
+answer — `project-kill-buffers\=' among the commands people close on —
+must get the command\='s and not the bookkeeping\='s."
+  (let (closed)
+    (cl-letf (((symbol-function 'auto-tab-groups--close-tab-group)
+               (lambda (name) (setq closed name) nil)))
+      (let ((advice (auto-tab-groups--get-close-advice
+                     '(:tab-group-name "group"))))
+        (should (eq (funcall advice #'auto-tab-groups-test--command) 'result))
+        (should (equal closed "group"))))))
+
+(ert-deftest auto-tab-groups-test-icon-falls-back-without-the-font ()
+  "A glyph the frame cannot draw comes back as a plain character.
+nerd-icons answers with the glyph whether or not the font is there,
+and without it the tab bar shows a hex box."
+  (cl-letf (((symbol-function 'nerd-icons-mdicon) (lambda (&rest _) "\uf0e7")))
+    (cl-letf (((symbol-function 'auto-tab-groups-eyecandy--displayable-p)
+               (lambda (&rest _) t)))
+      (should (equal (auto-tab-groups-eyecandy--icon
+                      '(:style "md" :icon "flash"))
+                     "\uf0e7")))
+    (cl-letf (((symbol-function 'auto-tab-groups-eyecandy--displayable-p)
+               #'ignore))
+      (should (equal (auto-tab-groups-eyecandy--icon
+                      '(:style "md" :icon "flash"))
+                     "?"))))
+  ;; a plain string icon is nobody's font problem
+  (should (equal (auto-tab-groups-eyecandy--icon "x") "x")))
+
+(ert-deftest auto-tab-groups-test-spacer-is-plain-in-a-terminal ()
+  "The tab bar spacer carries no `space-width\=' in a terminal.
+One such item anywhere in the format leaves the whole bar row
+unpainted there, so the row keeps whatever stood in it before."
+  (cl-letf (((symbol-function 'display-graphic-p) (lambda (&rest _) t)))
+    (should (equal (get-text-property
+                    0 'display (auto-tab-groups-eyecandy--wide-spacer))
+                   '(space-width 0.75))))
+  (cl-letf (((symbol-function 'display-graphic-p) #'ignore))
+    (let ((item (auto-tab-groups-eyecandy--wide-spacer)))
+      (should (equal item " "))
+      (should-not (get-text-property 0 'display item))))
+  ;; the format holds the names of the two spacers, so a value from
+  ;; customize can round trip
+  (should (memq 'auto-tab-groups-eyecandy--wide-spacer
+                auto-tab-groups-eyecandy-tab-bar-format)))
+
 (ert-deftest auto-tab-groups-test-find-tab-by-group-name ()
   "Tabs are found by their group name."
   (cl-letf (((symbol-function 'tab-bar-tabs-function)
@@ -118,6 +251,40 @@ advice carries a name; without it the advice would stay behind."
 (ert-deftest auto-tab-groups-test-project-group-name ()
   "Without a project there is no group name."
   (should-not (auto-tab-groups-project-group-name "/does/not/exist/")))
+
+(ert-deftest auto-tab-groups-test-project-group-name-from-any-return-value ()
+  "The name comes out for all three things the commands return.
+`project-prompt-project-dir' returns a directory,
+`project-switch-to-buffer' a buffer and `project-prompt-project-name'
+the name of a known project.  Only the directory used to work, so
+switching to a buffer of another project left the tab in the group of
+the project one came from."
+  (let* ((dir (file-name-as-directory (make-temp-file "auto-tab-groups-" t)))
+         (project-find-functions (list (lambda (d) (cons 'transient d))))
+         (name (project-name (cons 'transient dir)))
+         (expected (format "[P] %s" name)))
+    (unwind-protect
+        (cl-letf (((symbol-function 'project-known-project-roots)
+                   (lambda () (list dir))))
+          (should (equal (auto-tab-groups-project-group-name dir) expected))
+          (with-temp-buffer
+            (setq default-directory dir)
+            (should (equal (auto-tab-groups-project-group-name (current-buffer))
+                           expected)))
+          (should (equal (auto-tab-groups-project-group-name name) expected))
+          ;; a name nobody knows still answers with nothing
+          (should-not (auto-tab-groups-project-group-name "no such project")))
+      (delete-directory dir t))))
+
+(ert-deftest auto-tab-groups-test-the-old-names-still-answer ()
+  "The names that a configuration may hold still work.
+Both are user facing: one is an option, the other is named in a
+`tab-bar-format\='."
+  (should (eq (indirect-variable
+               'auto-tab-groups-eyecandy-tab-bar-group-name-format-function)
+              'auto-tab-groups-eyecandy-group-name-function))
+  (should (eq (symbol-function 'auto-tab-groups-new-group--tab-bar-format-new)
+              'auto-tab-groups-eyecandy-format-new-button)))
 
 (provide 'auto-tab-groups-test)
 ;;; auto-tab-groups-test.el ends here

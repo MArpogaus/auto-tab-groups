@@ -4,7 +4,7 @@
 
 ;; Author: Marcel Arpogaus <znepry.necbtnhf@tznvy.pbz>
 ;; Assisted-by: Claude:claude-opus-5
-;; Version: 0.3
+;; Version: 0.4
 ;; Package-Requires: ((emacs "29.1"))
 ;; Keywords: convenience, tabs
 ;; URL: https://github.com/MArpogaus/auto-tab-groups
@@ -62,24 +62,53 @@ See `auto-tab-groups-eyecandy-icons' for the alist and for the
 accepted icon values."
   :type '(choice string (plist :key-type symbol :value-type string)))
 
-(defcustom auto-tab-groups-eyecandy-tab-bar-group-name-format-function nil
-  "Function to format the tab-group-name."
-  :type 'function)
+(define-obsolete-variable-alias
+  'auto-tab-groups-eyecandy-tab-bar-group-name-format-function
+  'auto-tab-groups-eyecandy-group-name-function "0.4")
 
-(defun auto-tab-groups-eyecandy--format-spacer (&optional width)
-  "Return a `tab-bar-format' item that inserts a space of WIDTH.
-WIDTH is a factor of the normal space width, as in the `space-width'
-display property.  It defaults to the normal width."
-  (lambda () (propertize " " 'display `(space-width ,width))))
+(defcustom auto-tab-groups-eyecandy-group-name-function nil
+  "Function that returns the name to show for a tab group.
+It is called with the name of the group and returns the string that
+goes into the tab bar.  Nil shows the name as it is."
+  :type '(choice (const :tag "The name as it is" nil) function))
+
+(defun auto-tab-groups-eyecandy-format-new-button ()
+  "Return the tab bar button that makes a new tab group.
+A `tab-bar-format' can name this function."
+  `((add-tab menu-item ,tab-bar-new-button auto-tab-groups-new-group
+             :help "New")))
+
+(define-obsolete-function-alias
+  'auto-tab-groups-new-group--tab-bar-format-new
+  'auto-tab-groups-eyecandy-format-new-button "0.4")
+
+(defun auto-tab-groups-eyecandy--spacer (width)
+  "Return a space of WIDTH for the tab bar.
+WIDTH is a factor of the normal width of a space, as in the
+`space-width' display property.  A terminal draws no part of a cell,
+and one `space-width' item in the format leaves the whole row of the
+bar unpainted there.  The row then still shows what stood in it
+before.  A plain space says the same thing in a terminal."
+  (if (display-graphic-p)
+      (propertize " " 'display `(space-width ,width))
+    " "))
+
+(defun auto-tab-groups-eyecandy--thin-spacer ()
+  "Return a thin space for `auto-tab-groups-eyecandy-tab-bar-format'."
+  (auto-tab-groups-eyecandy--spacer 0.1))
+
+(defun auto-tab-groups-eyecandy--wide-spacer ()
+  "Return a wide space for `auto-tab-groups-eyecandy-tab-bar-format'."
+  (auto-tab-groups-eyecandy--spacer 0.75))
 
 (defcustom auto-tab-groups-eyecandy-tab-bar-format
-  `(tab-bar-format-tabs-groups
-    auto-tab-groups-new-group--tab-bar-format-new
+  '(tab-bar-format-tabs-groups
+    auto-tab-groups-eyecandy-format-new-button
     tab-bar-format-align-right
     tab-bar-format-global
-    ,(auto-tab-groups-eyecandy--format-spacer 0.1)
+    auto-tab-groups-eyecandy--thin-spacer
     tab-bar-format-menu-bar
-    ,(auto-tab-groups-eyecandy--format-spacer 0.75))
+    auto-tab-groups-eyecandy--wide-spacer)
   "List of tab bar items.  See `tab-bar-format' for datails."
   :type 'hook)
 
@@ -96,6 +125,27 @@ https://github.com/seagle0128/doom-modeline/blob/ec6bc00ac035e75ad10b52e516ea5d9
         'pbm t :foreground color :ascent 'center))
     (propertize "|" 'face (list :foreground color :background color))))
 
+(defun auto-tab-groups-eyecandy--displayable-p (char)
+  "Return non-nil when the selected frame has a glyph for CHAR.
+`char-displayable-p' answers for the character set and not for the
+font, so on a graphical frame ask the font instead.  Nerd font
+glyphs live in the private use area, and without the font they draw
+as a hex box."
+  (if (display-graphic-p)
+      (internal-char-font nil char)
+    (char-displayable-p char)))
+
+(defun auto-tab-groups-eyecandy--glyph (glyph fallback)
+  "Return GLYPH, or FALLBACK where the frame cannot draw it.
+nerd-icons answers with a glyph whether or not the frame has the
+font, and a nerd font glyph without the font is a hex box.  The tab
+marker asks the same question of its own character."
+  (if (and (stringp glyph)
+           (> (length glyph) 0)
+           (auto-tab-groups-eyecandy--displayable-p (aref glyph 0)))
+      glyph
+    fallback))
+
 (defun auto-tab-groups-eyecandy--nerd-icon (icon-spec)
   "Return the nerd icon glyph for ICON-SPEC.
 
@@ -106,19 +156,24 @@ Inspired from nerd-icons-corfu: https://github.com/LuigiPiucco/nerd-icons-corfu/
          (icon-name (if (equal style "suc")
                         (concat "nf-" icon)
                       (concat "nf-"  style "-" icon))))
-    (or (and (fboundp icon-fun) (funcall icon-fun icon-name)) "?")))
+    (if (fboundp icon-fun)
+        (auto-tab-groups-eyecandy--glyph (funcall icon-fun icon-name) "?")
+      "?")))
+
+(defun auto-tab-groups-eyecandy--icon (icon-spec)
+  "Return ICON-SPEC as the string that shows in the tab bar.
+A string stands for itself; a plist names a nerd icon."
+  (if (listp icon-spec)
+      (auto-tab-groups-eyecandy--nerd-icon icon-spec)
+    icon-spec))
 
 (defun auto-tab-groups-eyecandy--get-group-icon (tab-group-name)
   "Retrieve the icon for the given TAB-GROUP-NAME."
-  (if-let* ((tab-group-icon-spec
-            (cdr (seq-find (lambda (data)
-                             (let ((tab-group-name-re (car data)))
-                               (string-match tab-group-name-re tab-group-name)))
-                           auto-tab-groups-eyecandy-icons))))
-      (if (listp tab-group-icon-spec)
-          (auto-tab-groups-eyecandy--nerd-icon tab-group-icon-spec)
-        tab-group-icon-spec)
-    (auto-tab-groups-eyecandy--nerd-icon auto-tab-groups-eyecandy-default-icon)))
+  (auto-tab-groups-eyecandy--icon
+   (or (cdr (seq-find (lambda (data)
+                        (string-match-p (car data) tab-group-name))
+                      auto-tab-groups-eyecandy-icons))
+       auto-tab-groups-eyecandy-default-icon)))
 
 (defun auto-tab-groups-eyecandy--tab-bar-tab-group-format-function
     (tab _index &optional current-p)
@@ -129,9 +184,11 @@ CURRENT-P is non-nil when TAB is the selected one."
          (color (face-foreground (if current-p 'mode-line-emphasis 'shadow)))
          (group-sep (auto-tab-groups-eyecandy--get-bar-image auto-tab-groups-eyecandy-tab-height (if current-p 4 2) color))
          (group-icon (auto-tab-groups-eyecandy--get-group-icon tab-group-name))
-         (tab-group-name-formatted (if (functionp auto-tab-groups-eyecandy-tab-bar-group-name-format-function)
-                                       (funcall auto-tab-groups-eyecandy-tab-bar-group-name-format-function tab-group-name)
-                                     tab-group-name)))
+         (tab-group-name-formatted
+          (if (functionp auto-tab-groups-eyecandy-group-name-function)
+              (funcall auto-tab-groups-eyecandy-group-name-function
+                       tab-group-name)
+            tab-group-name)))
     (concat group-sep (propertize (concat " " group-icon " " tab-group-name-formatted " ") 'face tab-group-face))))
 
 (defun auto-tab-groups-eyecandy--tab-bar-tab-name-format-function (tab i)
@@ -139,7 +196,9 @@ CURRENT-P is non-nil when TAB is the selected one."
 TAB is the tab object and I is the tab index."
   (let ((current-p (eq (car tab) 'current-tab)))
     (propertize
-     (concat (if current-p " " " ")
+     (concat (if current-p
+                 (auto-tab-groups-eyecandy--glyph " " "\u203a ")
+               " ")
              (if tab-bar-tab-hints (format "%d " i) "")
              (alist-get 'name tab)
              (if (and tab-bar-close-button-show current-p)
@@ -172,9 +231,10 @@ TAB is the tab object and I is the tab index."
         tab-bar-tab-name-format-function #'auto-tab-groups-eyecandy--tab-bar-tab-name-format-function))
 
 (defun auto-tab-groups-eyecandy--teardown ()
-  "Remove advice from defined commands."
-  (when (>= emacs-major-version 29)
-    (tab-bar--load-buttons))
+  "Give the tab bar its stock look back."
+  ;; There is no public way to restore the stock buttons; this is the
+  ;; function that created them.
+  (tab-bar--load-buttons)
   (dolist (s '(tab-bar-separator
                tab-bar-auto-width
                tab-bar-tab-group-format-function
@@ -184,7 +244,7 @@ TAB is the tab object and I is the tab index."
 
 ;;;###autoload
 (define-minor-mode auto-tab-groups-eyecandy-mode
-  "Minor mode for automatic tab group management on command execution."
+  "Give the tab bar a modern style, with an icon for each tab group."
   :global t
   :group 'auto-tab-groups-eyecandy
   (if auto-tab-groups-eyecandy-mode

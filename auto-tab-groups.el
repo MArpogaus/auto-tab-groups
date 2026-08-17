@@ -4,7 +4,7 @@
 
 ;; Author: Marcel Arpogaus <znepry.necbtnhf@tznvy.pbz>
 ;; Assisted-by: Claude:claude-opus-5
-;; Version: 0.3
+;; Version: 0.4
 ;; Package-Requires: ((emacs "29.1"))
 ;; Keywords: convenience, tabs
 ;; URL: https://github.com/MArpogaus/auto-tab-groups
@@ -46,16 +46,17 @@ Each element should be a cons cell:
 - CAR: Command (symbol) or list of commands.
 - CDR: Group specification, which can be:
   - A string: Name of the tab group.
-  - A function: Called to dynamically determine the group name.  Its result
-                should be a string.  If `:ignore-result' is nil, the command's
-                result will be passed as argument to this function.  Otherwise
-                the command is called first, the result passed to the function
-                and then the tab group is created.
+  - A function: Called to determine the group name.  Its result should be a
+                string.  The command runs first and its result is passed to
+                the function, unless `:ignore-result' is non-nil: then the
+                group is created before the command runs and the function is
+                called with no argument.
   - A plist: Provides additional options.  Currently supported properties:
     - `:tab-group-name': Group name (string) or a function returning a string.
-    - `:ignore-result':  If non-nil and value is a function, command's result is
-                         passed to the function.  If nil, the tab group is
-                         created before the command is run.
+    - `:ignore-result':  If non-nil, the tab group is created before the
+                         command runs, and a name function is called with no
+                         argument.  If nil, the command runs first and its
+                         result is passed to a name function.
 
 Example:
 
@@ -139,20 +140,35 @@ Refer to `tab-bar-new-tab-choice' for details."
             (funcall tab-bar-tabs-function)))
 
 (defun auto-tab-groups--get-group-spec (command-data)
-  "Return valid group specification for the given COMMAND-DATA.
+  "Return the group specification of COMMAND-DATA as a plist.
 
-  The returned plist contains:
-  `:tab-group-name' - The group name (string or function).
-  `:ignore-result' - Whether to ignore the command's result (boolean)."
-  (let ((groups-spec (cdr command-data)))
-    (if (nlistp groups-spec) (list :tab-group-name groups-spec)
-      (plist-put (cdr groups-spec) :tab-group-name (car groups-spec)))))
+The returned plist contains:
+`:tab-group-name' - The group name (string or function).
+`:ignore-result' - Whether to ignore the command's result (boolean).
+
+The result is a fresh list: the input belongs to the user's
+customization and may not be modified."
+  (let ((spec (cdr command-data)))
+    (cond
+     ;; a bare name or a function, `(command . "name")'
+     ((or (nlistp spec) (functionp spec))
+      (list :tab-group-name spec))
+     ;; already a plist, `(command :tab-group-name "name" ...)'
+     ((keywordp (car spec))
+      (copy-sequence spec))
+     ;; name first, `(command "name" :ignore-result t)'
+     (t
+      (append (list :tab-group-name (car spec)) (cdr spec))))))
 
 (defun auto-tab-groups--switch-tab-group (tab)
   "Switch to TAB, the first tab of the wanted tab group."
   (tab-bar-select-tab (1+ (tab-bar--tab-index tab)))
   (when auto-tab-groups-echo-mode
     (message "Switched to tab group: %s" (alist-get 'group tab))))
+
+(defun auto-tab-groups--current-group ()
+  "Return the group name of the current tab, or nil."
+  (alist-get 'group (tab-bar--current-tab-find)))
 
 (defun auto-tab-groups--switch-or-create-tab-group (tab-group-name)
   "Switch to or create a tab group with the name TAB-GROUP-NAME."
@@ -162,17 +178,14 @@ Refer to `tab-bar-new-tab-choice' for details."
       (auto-tab-groups-new-group tab-group-name))))
 
 (defun auto-tab-groups--close-tab-group (tab-group-name)
-  "Close the tab group with the name TAB-GROUP-NAME."
-  (run-hooks 'auto-tab-groups-before-delete-hook)
-  (when-let* ((tab (auto-tab-groups--find-tab-by-group-name tab-group-name)))
-    (tab-bar-close-group-tabs tab-group-name))
-  (when auto-tab-groups-echo-mode
-    (message "Closed tab group: %s" tab-group-name))
-  (run-hooks 'auto-tab-groups-after-delete-hook))
-
-(defun auto-tab-groups--get-command-name (orig-fun)
-  "Return the symbol name of ORIG-FUN."
-  (if (subrp orig-fun) (intern (subr-name orig-fun)) orig-fun))
+  "Close the tab group with the name TAB-GROUP-NAME.
+Nothing happens when no such group exists."
+  (when (auto-tab-groups--find-tab-by-group-name tab-group-name)
+    (run-hooks 'auto-tab-groups-before-delete-hook)
+    (tab-bar-close-group-tabs tab-group-name)
+    (when auto-tab-groups-echo-mode
+      (message "Closed tab group: %s" tab-group-name))
+    (run-hooks 'auto-tab-groups-after-delete-hook)))
 
 (defun auto-tab-groups--get-create-advice (tab-group-spec)
   "Get advice function to handle tab group creation based on TAB-GROUP-SPEC."
@@ -185,10 +198,31 @@ Refer to `tab-bar-new-tab-choice' for details."
                                   tab-group-name-or-func)))
             (auto-tab-groups--switch-or-create-tab-group tab-group-name)
             (apply orig-fun args))
-        (let* ((results (apply orig-fun args))
+        ;; The group name is only known once the command has run, and
+        ;; by then the command has shown whatever it produced in the
+        ;; tab that was current.  Leave that tab as it was and take
+        ;; the buffer along to the group it belongs to.
+        (let* ((buffer (current-buffer))
+               (windows (current-window-configuration))
+               (results (apply orig-fun args))
+               (shown (current-buffer))
                (tab-group-name (if tab-group-name-functionp (funcall tab-group-name-or-func results)
-                                 tab-group-name-or-func)))
+                                 tab-group-name-or-func))
+               ;; Only when the command showed a buffer and the group
+               ;; it belongs to is another one.  A command that merely
+               ;; prompts leaves the new tab as it was.  It shows one
+               ;; when it hands one over, or when the current buffer
+               ;; changed: switching to the buffer that was current
+               ;; already changes nothing to compare, so the returned
+               ;; buffer is the only sign that anything was shown.
+               (carry (and tab-group-name
+                           (or (buffer-live-p results)
+                               (not (eq shown buffer)))
+                           (not (equal tab-group-name
+                                       (auto-tab-groups--current-group))))))
+          (when carry (set-window-configuration windows))
           (auto-tab-groups--switch-or-create-tab-group tab-group-name)
+          (when (and carry (buffer-live-p shown)) (switch-to-buffer shown))
           results)))))
 
 (defun auto-tab-groups--get-close-advice (tab-group-spec)
@@ -201,12 +235,11 @@ Refer to `tab-bar-new-tab-choice' for details."
                                (funcall tab-group-name-or-func result)
                              tab-group-name-or-func)))
       (when (or ignore-result result)
-        (auto-tab-groups--close-tab-group tab-group-name)))))
-
-(defun auto-tab-groups-new-group--tab-bar-format-new ()
-  "Button to add a new tab and assign it to a new group."
-  `((add-tab menu-item ,tab-bar-new-button auto-tab-groups-new-group
-             :help "New")))
+        (auto-tab-groups--close-tab-group tab-group-name))
+      ;; The advice stands in for the command, so it answers as the
+      ;; command did.  Closing a group is bookkeeping and its value is
+      ;; nobody's business.
+      result)))
 
 (defun auto-tab-groups--after-make-frame-function (&optional frame)
   "Initialize new group or clone existing one when new FRAME is created."
@@ -231,7 +264,11 @@ fresh closure, which `advice-remove' could not find again."
   "Advise the commands in COMMAND-DATA to manage tab groups.
 KIND is either the symbol `create' or the symbol `close'."
   (let ((tab-group-spec (auto-tab-groups--get-group-spec command-data))
-        (get-advice-fun (intern (format "auto-tab-groups--get-%s-advice" kind))))
+        ;; Named rather than made from KIND: there are two kinds, and
+        ;; a name that the compiler reads is a name that grep finds.
+        (get-advice-fun (if (eq kind 'create)
+                            #'auto-tab-groups--get-create-advice
+                          #'auto-tab-groups--get-close-advice)))
     (dolist (command (auto-tab-groups--commands command-data))
       (advice-add command :around (funcall get-advice-fun tab-group-spec)
                   `((name . ,(auto-tab-groups--advice-name kind)))))))
@@ -273,12 +310,15 @@ KIND is either the symbol `create' or the symbol `close'."
   "Create a new tab group with the name TAB-GROUP-NAME."
   (interactive (list (read-string "Group name: ")))
   (run-hooks 'auto-tab-groups-before-create-hook)
-  (let* ((tab-bar-new-tab-choice auto-tab-groups-new-choice)
-         (choice-buffer-name-p (stringp tab-bar-new-tab-choice)))
+  (let ((tab-bar-new-tab-choice auto-tab-groups-new-choice))
     (tab-bar-new-tab)
-    ;; HACK: When a new tab is created the previous buffers list seems to stay untouched,
-    ;;       so we set it to nil here.
-    (when choice-buffer-name-p
+    ;; A new tab keeps the window of the tab it was made from, and a
+    ;; window keeps the buffers it showed before.  Without this the
+    ;; new group would walk back into the buffers of the old one with
+    ;; `previous-buffer'.  Only where the choice is a buffer of its
+    ;; own: any other choice leaves the window where it was, and its
+    ;; history is the history of that window.
+    (when (stringp tab-bar-new-tab-choice)
       (set-window-prev-buffers (get-buffer-window) nil)))
   (tab-bar-change-tab-group tab-group-name)
   (when auto-tab-groups-echo-mode
