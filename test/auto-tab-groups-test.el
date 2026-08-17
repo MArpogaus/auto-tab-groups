@@ -286,5 +286,16 @@ Both are user facing: one is an option, the other is named in a
   (should (eq (symbol-function 'auto-tab-groups-new-group--tab-bar-format-new)
               'auto-tab-groups-eyecandy-format-new-button)))
 
+(ert-deftest auto-tab-groups-test-a-bar-without-a-color-has-no-face ()
+  "A separator without a color wears no face at all.
+A face attribute of nil is not \"leave it alone\": the display logs it
+as an invalid attribute, twice for each redisplay of the tab bar."
+  (cl-letf (((symbol-function 'display-graphic-p) #'ignore))
+    (should-not (get-text-property
+                 0 'face (auto-tab-groups-eyecandy--get-bar-image 25 2 nil)))
+    (should (equal (get-text-property
+                    0 'face (auto-tab-groups-eyecandy--get-bar-image 25 2 "red"))
+                   '(:foreground "red" :background "red")))))
+
 (provide 'auto-tab-groups-test)
 ;;; auto-tab-groups-test.el ends here

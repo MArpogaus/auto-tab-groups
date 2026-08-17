@@ -123,7 +123,11 @@ https://github.com/seagle0128/doom-modeline/blob/ec6bc00ac035e75ad10b52e516ea5d9
        (create-image
         (concat (format "P1\n%i %i\n" width height) (make-string (* width height) ?1) "\n")
         'pbm t :foreground color :ascent 'center))
-    (propertize "|" 'face (list :foreground color :background color))))
+    ;; A face attribute of nil is not "leave it alone", it is an error
+    ;; that the display logs on each redisplay.  A separator without a
+    ;; color wears no face and takes the one of the line it sits in.
+    (propertize "|" 'face (and color (list :foreground color
+                                           :background color)))))
 
 (defun auto-tab-groups-eyecandy--displayable-p (char)
   "Return non-nil when the selected frame has a glyph for CHAR.
@@ -181,7 +185,11 @@ A string stands for itself; a plist names a nerd icon."
 CURRENT-P is non-nil when TAB is the selected one."
   (let* ((tab-group-name (funcall tab-bar-tab-group-function tab))
          (tab-group-face (if current-p 'tab-bar-tab-group-current 'tab-bar-tab-group-inactive))
-         (color (face-foreground (if current-p 'mode-line-emphasis 'shadow)))
+         ;; With the default face at the end of the chain: a terminal
+         ;; theme often leaves `mode-line-emphasis' without a
+         ;; foreground of its own, and nil is not a color.
+         (color (face-foreground (if current-p 'mode-line-emphasis 'shadow)
+                                 nil 'default))
          (group-sep (auto-tab-groups-eyecandy--get-bar-image auto-tab-groups-eyecandy-tab-height (if current-p 4 2) color))
          (group-icon (auto-tab-groups-eyecandy--get-group-icon tab-group-name))
          (tab-group-name-formatted
