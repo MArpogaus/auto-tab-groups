@@ -39,12 +39,17 @@ does the work, and the [[https://www.gnu.org/software/emacs/manual/html_node/ema
 mode styles the tab bar.  The package leaves the other tab bar
 settings to you.
 
-The picture below shows the example configuration in this file:
+One tab bar with six groups: the current group at the left with its
+tab, the other groups beside it, an icon on each, and the button that
+makes a new group.
+
+[[file:img/tab-bar.png]]
+
+The recording below shows the example configuration in this file at
+work.  Each project gets a tab group of its own.  A command can open
+a group of its own.  The group closes when you close the work.
 
 [[file:img/demo.gif]]
-
-Each project gets a tab group of its own.  A command can open a group
-of its own.  The group closes when you close the work.
 
 ** Getting Started
 

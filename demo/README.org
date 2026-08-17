@@ -1,15 +1,20 @@
-* Demo Recording
+#+TITLE: The recording and the picture
 
-=img/demo.gif= is recorded from a real Emacs, without a screen
-recorder: =demo.el= drives a scripted session and captures one frame
-per tenth of a second through =x-export-frames=.
+This directory holds the scripts that make the pictures in the
+[[file:../README.org][README]].  Both come from a real Emacs session with the default theme.
+
+* The recording
+
+=img/demo.gif= comes from a scripted session.  =demo.el= drives the
+session and writes one frame each tenth of a second with
+=x-export-frames=.  There is no screen recorder.
 
 #+begin_src shell
-  Xvfb :99 -screen 0 1280x900x24 &   # when there is no display
-  DISPLAY=:99 emacs -Q -l demo.el    # writes frames to /tmp
+  Xvfb :99 -screen 0 1280x900x24 &   # if there is no display
+  DISPLAY=:99 emacs -Q -l demo.el    # writes the frames to /tmp
 #+end_src
 
-Build the animation from the frames:
+Make the animation from the frames:
 
 #+begin_src shell
   ffmpeg -framerate 13 -start_number 1 -i frames/f%04d.png \
@@ -19,5 +24,27 @@ Build the animation from the frames:
   gifsicle -O3 --lossy=80 raw.gif -o ../img/demo.gif
 #+end_src
 
-Never resample the frame rate afterwards: dropping every few frames
-makes the motion stutter.
+Do not resample the frame rate afterwards.  Dropping frames makes the
+motion uneven.
+
+* The picture of the tab bar
+
+=img/tab-bar.png= shows one tab bar with six groups.  =shots.el=
+builds it and exports the frame, and =shots.py= cuts the tab bar out
+of that frame:
+
+#+begin_src shell
+  DISPLAY=:99 emacs -Q -l shots.el
+  python3 shots.py ../img/tab-bar.png
+#+end_src
+
+The script needs two things:
+
+- [[https://github.com/rainstormstudio/nerd-icons.el][nerd-icons]] on the load path.  Add it with =-L= where your Emacs
+  does not have it already.
+- A nerd font on the system.  Without the font the package falls back
+  to a plain character, which is right in a session and poor in a
+  picture.
+
+The icons in the picture come from the =cod=, =oct= and =suc= styles.
+The =md= style needs a larger font than the symbols only one.
