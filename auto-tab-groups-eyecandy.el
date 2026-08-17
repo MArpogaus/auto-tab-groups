@@ -112,6 +112,18 @@ before.  A plain space says the same thing in a terminal."
   "List of tab bar items.  See `tab-bar-format' for datails."
   :type 'hook)
 
+(defun auto-tab-groups-eyecandy--tab-bar-format ()
+  "Return `auto-tab-groups-eyecandy-tab-bar-format' for this display.
+A terminal paints the row of the bar in the redisplay that turns the
+bar on.  With the menu button in the format, a tab that changes before
+that redisplay leaves the row blank for the rest of the session, and
+neither `force-mode-line-update' nor `redraw-display' brings it back.
+Measured with Emacs 30.2, in tmux 3.7 and under pyte.  A terminal
+reaches the menu with \\[menu-bar-open] in any case."
+  (if (display-graphic-p)
+      auto-tab-groups-eyecandy-tab-bar-format
+    (remq 'tab-bar-format-menu-bar auto-tab-groups-eyecandy-tab-bar-format)))
+
 (defun auto-tab-groups-eyecandy--get-bar-image (height width color)
   "Generate a rectangular bar image with HEIGHT, WIDTH, and COLOR.
 
@@ -232,7 +244,7 @@ TAB is the tab object and I is the tab index."
   (setq tab-bar-new-button (icon-string 'auto-tab-groups-eyecandy--tab-bar-new)
         tab-bar-close-button (propertize (icon-string 'auto-tab-groups-eyecandy--tab-bar-close)
                                          'close-tab t))
-  (setq tab-bar-format auto-tab-groups-eyecandy-tab-bar-format
+  (setq tab-bar-format (auto-tab-groups-eyecandy--tab-bar-format)
         tab-bar-separator ""
         tab-bar-auto-width nil
         tab-bar-tab-group-format-function #'auto-tab-groups-eyecandy--tab-bar-tab-group-format-function

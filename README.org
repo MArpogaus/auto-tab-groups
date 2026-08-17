@@ -250,6 +250,18 @@ Each entry of =auto-tab-groups-eyecandy-icons= has two parts:
 The first entry that matches wins.  An icon that the frame cannot
 draw falls back to a plain character.
 
+*** In the Terminal
+
+The eyecandy mode works in =emacs -nw=.  Two elements of the bar
+behave differently there, and the mode takes care of both:
+
+- A spacer is a plain space.  A terminal draws no part of a cell.
+- The bar has no menu button.  A terminal paints the row of the bar in
+  the redisplay that turns the bar on.  With the menu button on the
+  row, a tab that changes before that redisplay leaves the row blank
+  for the rest of the session.  =M-x menu-bar-open= (=F10=) opens the
+  same menu.
+
 ** Comparison with Other Packages
 
 - [[https://github.com/mclear-tools/tabspaces][tabspaces]] uses the tab bar and =project.el= to make workspaces with

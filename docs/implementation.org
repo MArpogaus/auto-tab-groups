@@ -106,6 +106,33 @@ that the default format uses.  It does this with the =space-width= display
 property, and only on a graphic display.  A terminal draws no part of
 a cell, and a plain space says the same there.
 
+** The menu button
+
+=auto-tab-groups-eyecandy--tab-bar-format= answers with the option in
+a graphic frame, and without =tab-bar-format-menu-bar= in a terminal.
+
+A terminal paints the row of the bar in the redisplay that turns the
+bar on, and it leaves the row alone after that.  With the menu button
+in the format, a tab that changes before that redisplay leaves the row
+blank for the rest of the session.  Neither =force-mode-line-update=
+nor =redraw-display= brings it back, and the row still shows what
+stood in it before.
+
+Stock Emacs does the same, and its own default format has no menu
+button:
+
+#+begin_src emacs-lisp
+  ;; emacs -nw -Q, and the row of the bar stays blank
+  (menu-bar-mode -1)
+  (setq tab-bar-format '(tab-bar-format-tabs tab-bar-format-menu-bar))
+  (tab-bar-mode 1)
+  (tab-bar-new-tab)
+#+end_src
+
+A =(redisplay t)= between the two last lines paints the row, and so
+does a format without the menu button.  Measured with Emacs 30.2, in
+tmux 3.7 and under pyte.
+
 * The tests
 
 =make test= runs the batch suite in
@@ -119,6 +146,7 @@ stub in the place of the switch function, and it tests:
 - the name of a project group, for each form of the result
 - the icon of a group, with and without a font
 - the spacer, on a graphic display and in a terminal
+- the format of the bar, with the menu button and without it
 
 A batch session has a frame and tabs, so the tab bookkeeping is
 testable without a display.

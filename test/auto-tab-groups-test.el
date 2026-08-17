@@ -297,5 +297,24 @@ as an invalid attribute, twice for each redisplay of the tab bar."
                     0 'face (auto-tab-groups-eyecandy--get-bar-image 25 2 "red"))
                    '(:foreground "red" :background "red")))))
 
+(ert-deftest auto-tab-groups-test-no-menu-button-in-a-terminal ()
+  "The bar of a terminal carries no menu button.
+A terminal paints the row of the bar in the redisplay that turns the
+bar on.  With the menu button in the format, a tab that changes before
+that redisplay leaves the row blank for the rest of the session, and
+no redraw brings it back."
+  (cl-letf (((symbol-function 'display-graphic-p) (lambda (&rest _) t)))
+    (should (equal (auto-tab-groups-eyecandy--tab-bar-format)
+                   auto-tab-groups-eyecandy-tab-bar-format)))
+  (cl-letf (((symbol-function 'display-graphic-p) #'ignore))
+    (let ((format (auto-tab-groups-eyecandy--tab-bar-format)))
+      (should-not (memq 'tab-bar-format-menu-bar format))
+      ;; and the rest of the format stands
+      (should (equal format (remq 'tab-bar-format-menu-bar
+                                  auto-tab-groups-eyecandy-tab-bar-format)))))
+  ;; the option keeps the button, so a graphic display has it
+  (should (memq 'tab-bar-format-menu-bar
+                auto-tab-groups-eyecandy-tab-bar-format)))
+
 (provide 'auto-tab-groups-test)
 ;;; auto-tab-groups-test.el ends here
