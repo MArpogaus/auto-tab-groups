@@ -276,5 +276,15 @@ the project one came from."
           (should-not (auto-tab-groups-project-group-name "no such project")))
       (delete-directory dir t))))
 
+(ert-deftest auto-tab-groups-test-the-old-names-still-answer ()
+  "The names that a configuration may hold still work.
+Both are user facing: one is an option, the other is named in a
+`tab-bar-format\='."
+  (should (eq (indirect-variable
+               'auto-tab-groups-eyecandy-tab-bar-group-name-format-function)
+              'auto-tab-groups-eyecandy-group-name-function))
+  (should (eq (symbol-function 'auto-tab-groups-new-group--tab-bar-format-new)
+              'auto-tab-groups-eyecandy-format-new-button)))
+
 (provide 'auto-tab-groups-test)
 ;;; auto-tab-groups-test.el ends here

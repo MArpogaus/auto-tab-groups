@@ -68,6 +68,11 @@ the format, the format function for a tab, the format function for a
 group, and the button for a new tab.  It puts the old values back
 when it goes off.
 
+Two names changed in version 0.4:
+=auto-tab-groups-eyecandy-group-name-function= and
+=auto-tab-groups-eyecandy-format-new-button=.  Both are user facing,
+so the old names are aliases.
+
 ** The separator
 
 =auto-tab-groups-eyecandy--get-bar-image= makes the bar between the
@@ -95,8 +100,9 @@ The package uses a plain character where the frame has no glyph.
 
 ** The spacers
 
-=auto-tab-groups-eyecandy--format-spacer= makes a space of a part of
-the normal width.  It does this with the =space-width= display
+=auto-tab-groups-eyecandy--spacer= makes a space of a part of the
+normal width, and =--thin-spacer= and =--wide-spacer= name the two
+that the default format uses.  It does this with the =space-width= display
 property, and only on a graphic display.  A terminal draws no part of
 a cell, and a plain space says the same there.
 

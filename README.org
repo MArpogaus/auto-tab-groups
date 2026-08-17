@@ -135,7 +135,7 @@ groups, and a shorter name for a project group:
        ("^\\[P\\] *" . (:style "oct" :icon "repo"))
        ("^\\[T\\] *" . (:style "cod" :icon "remote"))))
     ;; Remove the prefix from the name of a project group.
-    (auto-tab-groups-eyecandy-tab-bar-group-name-format-function
+    (auto-tab-groups-eyecandy-group-name-function
      (lambda (tab-group-name)
        (if (string-match "^\\[.\\] *" tab-group-name)
            (substring tab-group-name (match-end 0))
@@ -225,7 +225,7 @@ mode has no options of its own.
 | =auto-tab-groups-eyecandy-tab-height=                         | number        | the height of a tab in pixels           |
 | =auto-tab-groups-eyecandy-default-icon=                       | string, plist | the icon for a group without a match    |
 | =auto-tab-groups-eyecandy-tab-bar-format=                     | list          | the elements of the tab bar             |
-| =auto-tab-groups-eyecandy-tab-bar-group-name-format-function= | function      | a function that changes the group name  |
+| =auto-tab-groups-eyecandy-group-name-function=                 | function      | a function that changes the group name  |
 
 Each entry of =auto-tab-groups-eyecandy-icons= has two parts:
 

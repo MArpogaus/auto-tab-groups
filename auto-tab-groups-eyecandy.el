@@ -4,7 +4,7 @@
 
 ;; Author: Marcel Arpogaus <znepry.necbtnhf@tznvy.pbz>
 ;; Assisted-by: Claude:claude-opus-5
-;; Version: 0.3
+;; Version: 0.4
 ;; Package-Requires: ((emacs "29.1"))
 ;; Keywords: convenience, tabs
 ;; URL: https://github.com/MArpogaus/auto-tab-groups
@@ -62,9 +62,25 @@ See `auto-tab-groups-eyecandy-icons' for the alist and for the
 accepted icon values."
   :type '(choice string (plist :key-type symbol :value-type string)))
 
-(defcustom auto-tab-groups-eyecandy-tab-bar-group-name-format-function nil
-  "Function to format the tab-group-name."
-  :type 'function)
+(define-obsolete-variable-alias
+  'auto-tab-groups-eyecandy-tab-bar-group-name-format-function
+  'auto-tab-groups-eyecandy-group-name-function "0.4")
+
+(defcustom auto-tab-groups-eyecandy-group-name-function nil
+  "Function that returns the name to show for a tab group.
+It is called with the name of the group and returns the string that
+goes into the tab bar.  Nil shows the name as it is."
+  :type '(choice (const :tag "The name as it is" nil) function))
+
+(defun auto-tab-groups-eyecandy-format-new-button ()
+  "Return the tab bar button that makes a new tab group.
+A `tab-bar-format' can name this function."
+  `((add-tab menu-item ,tab-bar-new-button auto-tab-groups-new-group
+             :help "New")))
+
+(define-obsolete-function-alias
+  'auto-tab-groups-new-group--tab-bar-format-new
+  'auto-tab-groups-eyecandy-format-new-button "0.4")
 
 (defun auto-tab-groups-eyecandy--spacer (width)
   "Return a space of WIDTH for the tab bar.
@@ -87,7 +103,7 @@ before.  A plain space says the same thing in a terminal."
 
 (defcustom auto-tab-groups-eyecandy-tab-bar-format
   '(tab-bar-format-tabs-groups
-    auto-tab-groups-new-group--tab-bar-format-new
+    auto-tab-groups-eyecandy-format-new-button
     tab-bar-format-align-right
     tab-bar-format-global
     auto-tab-groups-eyecandy--thin-spacer
@@ -163,9 +179,11 @@ CURRENT-P is non-nil when TAB is the selected one."
          (color (face-foreground (if current-p 'mode-line-emphasis 'shadow)))
          (group-sep (auto-tab-groups-eyecandy--get-bar-image auto-tab-groups-eyecandy-tab-height (if current-p 4 2) color))
          (group-icon (auto-tab-groups-eyecandy--get-group-icon tab-group-name))
-         (tab-group-name-formatted (if (functionp auto-tab-groups-eyecandy-tab-bar-group-name-format-function)
-                                       (funcall auto-tab-groups-eyecandy-tab-bar-group-name-format-function tab-group-name)
-                                     tab-group-name)))
+         (tab-group-name-formatted
+          (if (functionp auto-tab-groups-eyecandy-group-name-function)
+              (funcall auto-tab-groups-eyecandy-group-name-function
+                       tab-group-name)
+            tab-group-name)))
     (concat group-sep (propertize (concat " " group-icon " " tab-group-name-formatted " ") 'face tab-group-face))))
 
 (defun auto-tab-groups-eyecandy--tab-bar-tab-name-format-function (tab i)

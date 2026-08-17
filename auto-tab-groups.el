@@ -4,7 +4,7 @@
 
 ;; Author: Marcel Arpogaus <znepry.necbtnhf@tznvy.pbz>
 ;; Assisted-by: Claude:claude-opus-5
-;; Version: 0.3
+;; Version: 0.4
 ;; Package-Requires: ((emacs "29.1"))
 ;; Keywords: convenience, tabs
 ;; URL: https://github.com/MArpogaus/auto-tab-groups
@@ -241,11 +241,6 @@ Nothing happens when no such group exists."
       ;; nobody's business.
       result)))
 
-(defun auto-tab-groups-new-group--tab-bar-format-new ()
-  "Button to add a new tab and assign it to a new group."
-  `((add-tab menu-item ,tab-bar-new-button auto-tab-groups-new-group
-             :help "New")))
-
 (defun auto-tab-groups--after-make-frame-function (&optional frame)
   "Initialize new group or clone existing one when new FRAME is created."
   (let ((tab-group-name (funcall tab-bar-tab-group-function (tab-bar--current-tab))))
@@ -315,12 +310,15 @@ KIND is either the symbol `create' or the symbol `close'."
   "Create a new tab group with the name TAB-GROUP-NAME."
   (interactive (list (read-string "Group name: ")))
   (run-hooks 'auto-tab-groups-before-create-hook)
-  (let* ((tab-bar-new-tab-choice auto-tab-groups-new-choice)
-         (choice-buffer-name-p (stringp tab-bar-new-tab-choice)))
+  (let ((tab-bar-new-tab-choice auto-tab-groups-new-choice))
     (tab-bar-new-tab)
-    ;; HACK: When a new tab is created the previous buffers list seems to stay untouched,
-    ;;       so we set it to nil here.
-    (when choice-buffer-name-p
+    ;; A new tab keeps the window of the tab it was made from, and a
+    ;; window keeps the buffers it showed before.  Without this the
+    ;; new group would walk back into the buffers of the old one with
+    ;; `previous-buffer'.  Only where the choice is a buffer of its
+    ;; own: any other choice leaves the window where it was, and its
+    ;; history is the history of that window.
+    (when (stringp tab-bar-new-tab-choice)
       (set-window-prev-buffers (get-buffer-window) nil)))
   (tab-bar-change-tab-group tab-group-name)
   (when auto-tab-groups-echo-mode
