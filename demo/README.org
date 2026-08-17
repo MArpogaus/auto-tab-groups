@@ -27,24 +27,32 @@ Make the animation from the frames:
 Do not resample the frame rate afterwards.  Dropping frames makes the
 motion uneven.
 
-* The picture of the tab bar
+* The pictures of the tab bar
 
-=img/tab-bar.png= shows one tab bar with six groups.  =shots.el=
-builds it and exports the frame, and =shots.py= cuts the tab bar out
-of that frame:
+=img/tab-bar-plain.png= shows the tab bar as Emacs draws it.
+=img/tab-bar.png= shows the same four groups with the eyecandy mode
+on.  Both come from one session and have the same size, so the README
+shows them one under the other without a jump.
+
+=shots.el= builds the session and exports the two frames, and
+=shots.py= cuts the tab bar out of each:
 
 #+begin_src shell
   DISPLAY=:99 emacs -Q -l shots.el
-  python3 shots.py ../img/tab-bar.png
+  python3 shots.py ../img
 #+end_src
+
+The script runs the configuration example of the README, so the
+picture shows what that example gives you.  It uses the modus
+operandi theme for the styled picture and the default theme for the
+plain one.
 
 The script needs two things:
 
 - [[https://github.com/rainstormstudio/nerd-icons.el][nerd-icons]] on the load path.  Add it with =-L= where your Emacs
   does not have it already.
-- A nerd font on the system.  Without the font the package falls back
-  to a plain character, which is right in a session and poor in a
-  picture.
-
-The icons in the picture come from the =cod=, =oct= and =suc= styles.
-The =md= style needs a larger font than the symbols only one.
+- A nerd font on the system.  The example uses icons from the =md=
+  style, which the symbols only font does not carry; a patched font
+  such as FiraCode Nerd Font has them.  Without the font the package
+  falls back to a plain character, which is right in a session and
+  poor in a picture.

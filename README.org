@@ -39,12 +39,6 @@ does the work, and the [[https://www.gnu.org/software/emacs/manual/html_node/ema
 mode styles the tab bar.  The package leaves the other tab bar
 settings to you.
 
-One tab bar with six groups: the current group at the left with its
-tab, the other groups beside it, an icon on each, and the button that
-makes a new group.
-
-[[file:img/tab-bar.png]]
-
 The recording below shows the example configuration in this file at
 work.  Each project gets a tab group of its own.  A command can open
 a group of its own.  The group closes when you close the work.
@@ -222,7 +216,21 @@ mode has no options of its own.
 
 *** auto-tab-groups-eyecandy
 
-=auto-tab-groups-eyecandy-mode= styles the tab bar.
+=auto-tab-groups-eyecandy-mode= styles the tab bar.  The tab bar as
+Emacs draws it, with the groups in it:
+
+[[file:img/tab-bar-plain.png]]
+
+And the same four groups with the mode on, in the configuration
+example above:
+
+[[file:img/tab-bar.png]]
+
+The current group is at the left with its tab.  The other groups
+follow, with an icon on each, and the button at the end makes a new
+group.  The prefix of the project group is gone, because the example
+gives =auto-tab-groups-eyecandy-group-name-function= a function that
+takes it off.
 
 | Option                                                      | Type          | Description                             |
 |-------------------------------------------------------------+---------------+-----------------------------------------|

@@ -135,6 +135,17 @@ as a hex box."
       (internal-char-font nil char)
     (char-displayable-p char)))
 
+(defun auto-tab-groups-eyecandy--glyph (glyph fallback)
+  "Return GLYPH, or FALLBACK where the frame cannot draw it.
+nerd-icons answers with a glyph whether or not the frame has the
+font, and a nerd font glyph without the font is a hex box.  The tab
+marker asks the same question of its own character."
+  (if (and (stringp glyph)
+           (> (length glyph) 0)
+           (auto-tab-groups-eyecandy--displayable-p (aref glyph 0)))
+      glyph
+    fallback))
+
 (defun auto-tab-groups-eyecandy--nerd-icon (icon-spec)
   "Return the nerd icon glyph for ICON-SPEC.
 
@@ -145,15 +156,9 @@ Inspired from nerd-icons-corfu: https://github.com/LuigiPiucco/nerd-icons-corfu/
          (icon-name (if (equal style "suc")
                         (concat "nf-" icon)
                       (concat "nf-"  style "-" icon))))
-    (or (and (fboundp icon-fun)
-             (let ((glyph (funcall icon-fun icon-name)))
-               ;; nerd-icons answers with the glyph whether or not the
-               ;; frame can draw it, and a nerd font glyph without the
-               ;; font is a hex box in the tab bar.
-               (and (> (length glyph) 0)
-                    (auto-tab-groups-eyecandy--displayable-p (aref glyph 0))
-                    glyph)))
-        "?")))
+    (if (fboundp icon-fun)
+        (auto-tab-groups-eyecandy--glyph (funcall icon-fun icon-name) "?")
+      "?")))
 
 (defun auto-tab-groups-eyecandy--icon (icon-spec)
   "Return ICON-SPEC as the string that shows in the tab bar.
@@ -191,10 +196,9 @@ CURRENT-P is non-nil when TAB is the selected one."
 TAB is the tab object and I is the tab index."
   (let ((current-p (eq (car tab) 'current-tab)))
     (propertize
-     (concat (cond ((not current-p) " ")
-                   ((auto-tab-groups-eyecandy--displayable-p #xeb70)
-                    " ")
-                   (t "\u203a "))
+     (concat (if current-p
+                 (auto-tab-groups-eyecandy--glyph " " "\u203a ")
+               " ")
              (if tab-bar-tab-hints (format "%d " i) "")
              (alist-get 'name tab)
              (if (and tab-bar-close-button-show current-p)
