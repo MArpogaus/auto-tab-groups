@@ -217,7 +217,7 @@ TAB is the tab object and I is the tab index."
   (let ((current-p (eq (car tab) 'current-tab)))
     (propertize
      (concat (if current-p
-                 (auto-tab-groups-eyecandy--glyph " " "\u203a ")
+                 (auto-tab-groups-eyecandy--glyph " " "› ")
                " ")
              (if tab-bar-tab-hints (format "%d " i) "")
              (alist-get 'name tab)

@@ -208,13 +208,10 @@ Nothing happens when no such group exists."
                (shown (current-buffer))
                (tab-group-name (if tab-group-name-functionp (funcall tab-group-name-or-func results)
                                  tab-group-name-or-func))
-               ;; Only when the command showed a buffer and the group
-               ;; it belongs to is another one.  A command that merely
-               ;; prompts leaves the new tab as it was.  It shows one
-               ;; when it hands one over, or when the current buffer
-               ;; changed: switching to the buffer that was current
-               ;; already changes nothing to compare, so the returned
-               ;; buffer is the only sign that anything was shown.
+               ;; A command that only prompts shows no buffer and the
+               ;; new tab stays as it is.  Switching to the buffer that
+               ;; was current already changes nothing to compare, so a
+               ;; returned buffer is the only sign of one being shown.
                (carry (and tab-group-name
                            (or (buffer-live-p results)
                                (not (eq shown buffer)))
@@ -236,9 +233,6 @@ Nothing happens when no such group exists."
                              tab-group-name-or-func)))
       (when (or ignore-result result)
         (auto-tab-groups--close-tab-group tab-group-name))
-      ;; The advice stands in for the command, so it answers as the
-      ;; command did.  Closing a group is bookkeeping and its value is
-      ;; nobody's business.
       result)))
 
 (defun auto-tab-groups--after-make-frame-function (&optional frame)
@@ -264,8 +258,6 @@ fresh closure, which `advice-remove' could not find again."
   "Advise the commands in COMMAND-DATA to manage tab groups.
 KIND is either the symbol `create' or the symbol `close'."
   (let ((tab-group-spec (auto-tab-groups--get-group-spec command-data))
-        ;; Named rather than made from KIND: there are two kinds, and
-        ;; a name that the compiler reads is a name that grep finds.
         (get-advice-fun (if (eq kind 'create)
                             #'auto-tab-groups--get-create-advice
                           #'auto-tab-groups--get-close-advice)))

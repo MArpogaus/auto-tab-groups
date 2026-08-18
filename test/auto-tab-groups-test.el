@@ -206,12 +206,12 @@ must get the command\='s and not the bookkeeping\='s."
   "A glyph the frame cannot draw comes back as a plain character.
 nerd-icons answers with the glyph whether or not the font is there,
 and without it the tab bar shows a hex box."
-  (cl-letf (((symbol-function 'nerd-icons-mdicon) (lambda (&rest _) "\uf0e7")))
+  (cl-letf (((symbol-function 'nerd-icons-mdicon) (lambda (&rest _) "")))
     (cl-letf (((symbol-function 'auto-tab-groups-eyecandy--displayable-p)
                (lambda (&rest _) t)))
       (should (equal (auto-tab-groups-eyecandy--icon
                       '(:style "md" :icon "flash"))
-                     "\uf0e7")))
+                     "")))
     (cl-letf (((symbol-function 'auto-tab-groups-eyecandy--displayable-p)
                #'ignore))
       (should (equal (auto-tab-groups-eyecandy--icon
