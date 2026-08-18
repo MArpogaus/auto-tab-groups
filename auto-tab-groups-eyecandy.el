@@ -151,16 +151,19 @@ as a hex box."
       (internal-char-font nil char)
     (char-displayable-p char)))
 
-(defun auto-tab-groups-eyecandy--glyph (glyph fallback)
-  "Return GLYPH, or FALLBACK where the frame cannot draw it.
-nerd-icons answers with a glyph whether or not the frame has the
-font, and a nerd font glyph without the font is a hex box.  The tab
-marker asks the same question of its own character."
-  (if (and (stringp glyph)
-           (> (length glyph) 0)
-           (auto-tab-groups-eyecandy--displayable-p (aref glyph 0)))
-      glyph
-    fallback))
+(defun auto-tab-groups-eyecandy--glyph (&rest candidates)
+  "Return the first of CANDIDATES the frame can draw.
+The last one is the answer when it can draw none of them, so keep a
+plain character there.  nerd-icons answers with a glyph whether or not
+the frame has the font, and a nerd font glyph without the font is a hex
+box.  The tab marker asks the same question of its own character."
+  (or (seq-find (lambda (candidate)
+                  (and (stringp candidate)
+                       (> (length candidate) 0)
+                       (auto-tab-groups-eyecandy--displayable-p
+                        (aref candidate 0))))
+                (butlast candidates))
+      (car (last candidates))))
 
 (defun auto-tab-groups-eyecandy--nerd-icon (icon-spec)
   "Return the nerd icon glyph for ICON-SPEC.

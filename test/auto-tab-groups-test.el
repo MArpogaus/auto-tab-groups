@@ -316,5 +316,18 @@ no redraw brings it back."
   (should (memq 'tab-bar-format-menu-bar
                 auto-tab-groups-eyecandy-tab-bar-format)))
 
+(ert-deftest auto-tab-groups-test-glyph-takes-a-row-of-candidates ()
+  "The first candidate the frame can draw wins, and the last always answers.
+The bars ask for a glyph of the material family first, the one that was
+there before it second, and a plain character last."
+  (cl-letf (((symbol-function 'auto-tab-groups-eyecandy--displayable-p)
+             ;; a frame with the second candidate only
+             (lambda (ch) (eq ch ?b))))
+    (should (equal (auto-tab-groups-eyecandy--glyph "a" "b" "c") "b"))
+    (should (equal (auto-tab-groups-eyecandy--glyph "a" "x" "c") "c"))
+    (should (equal (auto-tab-groups-eyecandy--glyph "b") "b"))
+    ;; nothing to ask about an empty candidate
+    (should (equal (auto-tab-groups-eyecandy--glyph "" "c") "c"))))
+
 (provide 'auto-tab-groups-test)
 ;;; auto-tab-groups-test.el ends here
