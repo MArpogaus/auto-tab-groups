@@ -1,0 +1,58 @@
+#+TITLE: The recording and the picture
+
+This directory holds the scripts that make the pictures in the
+[[file:../README.org][README]].  Both come from a real Emacs session with the default theme.
+
+* The recording
+
+=img/demo.gif= comes from a scripted session.  =demo.el= drives the
+session and writes one frame each tenth of a second with
+=x-export-frames=.  There is no screen recorder.
+
+#+begin_src shell
+  Xvfb :99 -screen 0 1280x900x24 &   # if there is no display
+  DISPLAY=:99 emacs -Q -l demo.el    # writes the frames to /tmp
+#+end_src
+
+Make the animation from the frames:
+
+#+begin_src shell
+  ffmpeg -framerate 13 -start_number 1 -i frames/f%04d.png \
+      -filter_complex "[0:v]scale=820:-1:flags=lanczos,split[a][b];\
+                       [a]palettegen=max_colors=128[p];[b][p]paletteuse" \
+      -loop 0 raw.gif
+  gifsicle -O3 --lossy=80 raw.gif -o ../img/demo.gif
+#+end_src
+
+Do not resample the frame rate afterwards.  Dropping frames makes the
+motion uneven.
+
+* The pictures of the tab bar
+
+=img/tab-bar-plain.png= shows the tab bar as Emacs draws it.
+=img/tab-bar.png= shows the same four groups with the eyecandy mode
+on.  Both come from one session and have the same size, so the README
+shows them one under the other without a jump.
+
+=shots.el= builds the session and exports the two frames, and
+=shots.py= cuts the tab bar out of each:
+
+#+begin_src shell
+  DISPLAY=:99 emacs -Q -l shots.el
+  python3 shots.py ../img
+#+end_src
+
+The script runs the configuration example of the README, so the
+picture shows what that example gives you.  It uses the modus
+operandi theme for the styled picture and the default theme for the
+plain one.
+
+The script needs two things:
+
+- [[https://github.com/rainstormstudio/nerd-icons.el][nerd-icons]] on the load path.  Add it with =-L= where your Emacs
+  does not have it already.
+- A nerd font on the system.  The example uses icons from the =md=
+  style, which the symbols only font does not carry; a patched font
+  such as FiraCode Nerd Font has them.  Without the font the package
+  falls back to a plain character, which is right in a session and
+  poor in a picture.
