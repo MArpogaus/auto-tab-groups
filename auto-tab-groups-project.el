@@ -70,13 +70,22 @@ advised `project-prompt-project-dir', which creates a group for the
 answer to a question the command then asks again.  The buffers of the
 second answer were killed and the group of the first one closed.
 
-The buffers decide, not the command's answer: where it finds none to
-kill it returns the string of its own message, which is not nil, and the
-group went although nothing had."
+A killed buffer decides, not the command's answer: where it finds none
+to kill it returns the string of its own message, which is not nil, and
+the group went although nothing had.  A reader who declines the
+confirmation gets the same answer, and no group closes.
+
+Whether any buffer died, not whether the project has none left.
+`project-kill-buffer-conditions' keeps what it does not name, and
+`project-buffers' counts every buffer whose `default-directory' lies
+under the root — `*scratch*' and the minibuffer among them for a project
+that holds the directory Emacs started in.  Asking for an empty project
+therefore never closed a group at all."
   (if-let* ((project (project-current nil))
-            (dir (project-root project)))
+            (dir (project-root project))
+            (before (length (buffer-list))))
       (progn (apply orig-fun args)
-             (unless (project-buffers project) dir))
+             (and (< (length (buffer-list)) before) dir))
     (apply orig-fun args)))
 
 (defun auto-tab-groups-project--setup ()
