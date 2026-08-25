@@ -207,12 +207,12 @@ must get the command\='s and not the bookkeeping\='s."
 nerd-icons answers with the glyph whether or not the font is there,
 and without it the tab bar shows a hex box."
   (cl-letf (((symbol-function 'nerd-icons-mdicon) (lambda (&rest _) "")))
-    (cl-letf (((symbol-function 'auto-tab-groups-eyecandy--displayable-p)
+    (cl-letf (((symbol-function 'auto-tab-groups-eyecandy--drawable-p)
                (lambda (&rest _) t)))
       (should (equal (auto-tab-groups-eyecandy--icon
                       '(:style "md" :icon "flash"))
                      "")))
-    (cl-letf (((symbol-function 'auto-tab-groups-eyecandy--displayable-p)
+    (cl-letf (((symbol-function 'auto-tab-groups-eyecandy--drawable-p)
                #'ignore))
       (should (equal (auto-tab-groups-eyecandy--icon
                       '(:style "md" :icon "flash"))
@@ -316,13 +316,39 @@ no redraw brings it back."
   (should (memq 'tab-bar-format-menu-bar
                 auto-tab-groups-eyecandy-tab-bar-format)))
 
+(ert-deftest auto-tab-groups-test-drawable-asks-with-the-glyph-s-own-face ()
+  "The question carries the face, so a nerd glyph is asked of its own font.
+The test before this one asked `internal-char-font\=' about the character
+alone, which answers for the default font of the selected window\='s
+buffer.  In an Org buffer with `mixed-pitch-mode\=' that font is a
+proportional family with no nerd glyphs, so every icon came back as
+`?\=' the moment such a buffer was current — measured, the same
+character resolves to Source Code Pro in a plain buffer and to DejaVu
+Sans in a mixed-pitch one."
+  (let (asked)
+    (cl-letf (((symbol-function 'display-graphic-p) (lambda (&rest _) t))
+              ((symbol-function 'font-at)
+               (lambda (position _window string)
+                 (setq asked (list position string))
+                 'a-font)))
+      (let ((icon (propertize "x" 'face '(:family "Symbols Nerd Font Mono"))))
+        (should (auto-tab-groups-eyecandy--drawable-p icon))
+        (should (equal (car asked) 0))
+        ;; the face travelled into the question, which is the whole fix
+        (should (equal (get-text-property 0 'face (cadr asked))
+                       '(:family "Symbols Nerd Font Mono"))))
+      ;; and an empty candidate is not asked about at all
+      (setq asked nil)
+      (should-not (auto-tab-groups-eyecandy--drawable-p ""))
+      (should-not asked))))
+
 (ert-deftest auto-tab-groups-test-glyph-takes-a-row-of-candidates ()
   "The first candidate the frame can draw wins, and the last always answers.
 The bars ask for a glyph of the material family first, the one that was
 there before it second, and a plain character last."
-  (cl-letf (((symbol-function 'auto-tab-groups-eyecandy--displayable-p)
+  (cl-letf (((symbol-function 'auto-tab-groups-eyecandy--drawable-p)
              ;; a frame with the second candidate only
-             (lambda (ch) (eq ch ?b))))
+             (lambda (string) (equal string "b"))))
     (should (equal (auto-tab-groups-eyecandy--glyph "a" "b" "c") "b"))
     (should (equal (auto-tab-groups-eyecandy--glyph "a" "x" "c") "c"))
     (should (equal (auto-tab-groups-eyecandy--glyph "b") "b"))
