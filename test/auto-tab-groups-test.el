@@ -248,32 +248,34 @@ unpainted there, so the row keeps whatever stood in it before."
                    "b"))
     (should-not (auto-tab-groups--find-tab-by-group-name "three"))))
 
-(ert-deftest auto-tab-groups-test-project-close-asks-nothing-and-counts-buffers ()
-  "The close advice prompts for no project and reads the buffers, not the answer.
+(ert-deftest auto-tab-groups-test-project-close-asks-nothing-and-counts-the-dead ()
+  "The close advice prompts for no project and reads the buffer list, not the answer.
 `project-kill-buffers' asks with a prompt of its own, and a prompt in
 the advice came first — through the advised `project-prompt-project-dir',
 which creates a group for the answer to a question the command then asks
 again.  And where the command finds no buffer to kill it returns the
 string of its own message, which is not nil, so the group went although
-nothing had."
-  (let (prompted killed)
-    (cl-letf* (((symbol-function 'project-current)
-                (lambda (&optional maybe-prompt _dir)
-                  (when maybe-prompt (setq prompted t))
-                  '(vc Git "/tmp/project/")))
-               ((symbol-function 'project-root) (lambda (_project) "/tmp/project/"))
-               ((symbol-function 'project-buffers)
-                (lambda (_project) (unless killed (list (current-buffer)))))
-               (command (lambda (&rest _)
-                          ;; what the command answers where it killed nothing
-                          (message "No buffers to kill"))))
-      ;; nothing killed: no group name, so no group closes
-      (should-not (auto-tab-groups-project--project-kill-buffers-advice command))
-      (should-not prompted)
-      ;; buffers gone: the root comes back
-      (setq killed t)
-      (should (equal (auto-tab-groups-project--project-kill-buffers-advice command)
-                     "/tmp/project/"))
+nothing had.
+
+The buffer list is what answers, not the project.  An earlier attempt
+asked whether the project had buffers left, mocked that away here, and
+shipped: `project-kill-buffer-conditions' keeps every buffer it does not
+name, and `project-buffers' counts `*scratch*' and the minibuffer for a
+project holding the directory Emacs started in, so no group ever closed."
+  (let (prompted)
+    (cl-letf (((symbol-function 'project-current)
+               (lambda (&optional maybe-prompt &rest _)
+                 (when maybe-prompt (setq prompted t))
+                 '(vc Git "/tmp/project/")))
+              ((symbol-function 'project-root) (lambda (_project) "/tmp/project/")))
+      ;; a command that kills nothing and answers with its own message
+      (should-not (auto-tab-groups-project--project-kill-buffers-advice
+                   (lambda (&rest _) "No buffers to kill")))
+      ;; one that kills a buffer and answers nil: the answer says nothing
+      (let ((doomed (generate-new-buffer "*doomed*")))
+        (should (equal (auto-tab-groups-project--project-kill-buffers-advice
+                        (lambda (&rest _) (kill-buffer doomed) nil))
+                       "/tmp/project/")))
       (should-not prompted))))
 
 (ert-deftest auto-tab-groups-test-project-group-name ()
