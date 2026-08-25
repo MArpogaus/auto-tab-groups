@@ -38,6 +38,21 @@
   "Modern tab bar."
   :group 'auto-tab-groups)
 
+(defvar auto-tab-groups-eyecandy--icons (make-hash-table :test #'equal)
+  "The icon each group name answered, keyed on the name and the display.
+A terminal and a graphic frame answer differently, and one session can
+hold both.  `auto-tab-groups-eyecandy--forget' empties this where the
+answer can change: another icon list, or a font arriving.")
+
+(defun auto-tab-groups-eyecandy--forget (&rest _)
+  "Forget the icons answered so far."
+  (clrhash auto-tab-groups-eyecandy--icons))
+
+(defun auto-tab-groups-eyecandy--set-icons (symbol value)
+  "Set SYMBOL to VALUE and forget the icons answered before it changed."
+  (set-default symbol value)
+  (auto-tab-groups-eyecandy--forget))
+
 (defcustom auto-tab-groups-eyecandy-icons
   '(("HOME" :style "suc" :icon "custom-emacs"))
   "Alist mapping tab group names to icons.
@@ -50,7 +65,8 @@ The first matching element wins.  Group names without a match get
 `auto-tab-groups-eyecandy-default-icon'."
   :type '(alist :key-type regexp
                 :value-type (choice string (plist :key-type symbol
-                                                  :value-type string))))
+                                                  :value-type string)))
+  :set #'auto-tab-groups-eyecandy--set-icons)
 
 (defcustom auto-tab-groups-eyecandy-tab-height 25
   "Height of the tab bar tabs in pixels."
@@ -60,7 +76,8 @@ The first matching element wins.  Group names without a match get
   "Icon shown for tab groups that match no entry in the icon alist.
 See `auto-tab-groups-eyecandy-icons' for the alist and for the
 accepted icon values."
-  :type '(choice string (plist :key-type symbol :value-type string)))
+  :type '(choice string (plist :key-type symbol :value-type string))
+  :set #'auto-tab-groups-eyecandy--set-icons)
 
 (define-obsolete-variable-alias
   'auto-tab-groups-eyecandy-tab-bar-group-name-format-function
@@ -124,17 +141,27 @@ reaches the menu with \\[menu-bar-open] in any case."
       auto-tab-groups-eyecandy-tab-bar-format
     (remq 'tab-bar-format-menu-bar auto-tab-groups-eyecandy-tab-bar-format)))
 
+(defvar auto-tab-groups-eyecandy--bars (make-hash-table :test #'equal)
+  "The bar images built so far, keyed on height, width and colour.
+Nothing invalidates them: a theme brings another colour, which is
+another key.")
+
 (defun auto-tab-groups-eyecandy--get-bar-image (height width color)
   "Generate a rectangular bar image with HEIGHT, WIDTH, and COLOR.
 
 Thanks to doom-modeline for the idea:
 https://github.com/seagle0128/doom-modeline/blob/ec6bc00ac035e75ad10b52e516ea5d95cc9e0bd9/doom-modeline-core.el#L1454C8-L1454C39"
   (if (and (image-type-available-p 'pbm) (display-graphic-p))
-      (propertize
-       " " 'display
-       (create-image
-        (concat (format "P1\n%i %i\n" width height) (make-string (* width height) ?1) "\n")
-        'pbm t :foreground color :ascent 'center))
+      ;; Two of these exist in a session, one per width, and building one
+      ;; means a fresh payload string and a spec the image cache then
+      ;; compares whole: 14 microseconds a group, every redraw.
+      (with-memoization (gethash (list height width color)
+                                 auto-tab-groups-eyecandy--bars)
+        (propertize
+         " " 'display
+         (create-image
+          (concat (format "P1\n%i %i\n" width height) (make-string (* width height) ?1) "\n")
+          'pbm t :foreground color :ascent 'center)))
     ;; A face attribute of nil is not "leave it alone", it is an error
     ;; that the display logs on each redisplay.  A separator without a
     ;; color wears no face and takes the one of the line it sits in.
@@ -183,9 +210,9 @@ Inspired from nerd-icons-corfu: https://github.com/LuigiPiucco/nerd-icons-corfu/
          (icon-name (if (equal style "suc")
                         (concat "nf-" icon)
                       (concat "nf-"  style "-" icon))))
-    (if (fboundp icon-fun)
-        (auto-tab-groups-eyecandy--glyph (funcall icon-fun icon-name) "?")
-      "?")))
+    (auto-tab-groups-eyecandy--glyph (and (fboundp icon-fun)
+                                          (funcall icon-fun icon-name))
+                                     "?")))
 
 (defun auto-tab-groups-eyecandy--icon (icon-spec)
   "Return ICON-SPEC as the string that shows in the tab bar.
@@ -195,12 +222,24 @@ A string stands for itself; a plist names a nerd icon."
     icon-spec))
 
 (defun auto-tab-groups-eyecandy--get-group-icon (tab-group-name)
-  "Retrieve the icon for the given TAB-GROUP-NAME."
-  (auto-tab-groups-eyecandy--icon
-   (or (cdr (seq-find (lambda (data)
-                        (string-match-p (car data) tab-group-name))
-                      auto-tab-groups-eyecandy-icons))
-       auto-tab-groups-eyecandy-default-icon)))
+  "Retrieve the icon for the given TAB-GROUP-NAME.
+The answer is kept.  The tab bar is built again on every command, and
+finding an icon walks the table of its nerd-icons style — 6880 entries
+for the material design one, measured at 26 microseconds, for every
+group, every time.
+
+The patterns are matched with the case rules of the reader who wrote
+them, not with those of whatever buffer redisplay happens to be in:
+`string-match-p' honours a buffer-local `case-fold-search', so \"HOME\"
+claimed \"[P] homelab\" in most buffers and not in others."
+  (let ((key (cons tab-group-name (display-graphic-p))))
+    (with-memoization (gethash key auto-tab-groups-eyecandy--icons)
+      (auto-tab-groups-eyecandy--icon
+       (or (cdr (seq-find (lambda (data)
+                            (let ((case-fold-search nil))
+                              (string-match-p (car data) tab-group-name)))
+                          auto-tab-groups-eyecandy-icons))
+           auto-tab-groups-eyecandy-default-icon)))))
 
 (defun auto-tab-groups-eyecandy--tab-bar-tab-group-format-function
     (tab _index &optional current-p)
@@ -232,7 +271,11 @@ TAB is the tab object and I is the tab index."
                " ")
              (if tab-bar-tab-hints (format "%d " i) "")
              (alist-get 'name tab)
-             (if (and tab-bar-close-button-show current-p)
+             ;; `tab-bar-close-button-show' is four-valued, and reading
+             ;; it as a boolean showed the button on the selected tab for
+             ;; `non-selected', which is the other way round.
+             (if (memq tab-bar-close-button-show
+                       (if current-p '(t selected) '(t non-selected)))
                  tab-bar-close-button " "))
      'face (list :inherit 'tab-bar-tab :weight (if current-p 'bold 'normal)))))
 
@@ -252,6 +295,7 @@ TAB is the tab object and I is the tab index."
       "Icon for closing the clicked tab."
       :version "29.1"
       :help-echo "Click to close tab"))
+  (add-hook 'after-setting-font-hook #'auto-tab-groups-eyecandy--forget)
   (setq tab-bar-new-button (icon-string 'auto-tab-groups-eyecandy--tab-bar-new)
         tab-bar-close-button (propertize (icon-string 'auto-tab-groups-eyecandy--tab-bar-close)
                                          'close-tab t))
@@ -263,6 +307,7 @@ TAB is the tab object and I is the tab index."
 
 (defun auto-tab-groups-eyecandy--teardown ()
   "Give the tab bar its stock look back."
+  (remove-hook 'after-setting-font-hook #'auto-tab-groups-eyecandy--forget)
   ;; There is no public way to restore the stock buttons; this is the
   ;; function that created them.
   (tab-bar--load-buttons)

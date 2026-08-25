@@ -248,6 +248,34 @@ unpainted there, so the row keeps whatever stood in it before."
                    "b"))
     (should-not (auto-tab-groups--find-tab-by-group-name "three"))))
 
+(ert-deftest auto-tab-groups-test-project-close-asks-nothing-and-counts-buffers ()
+  "The close advice prompts for no project and reads the buffers, not the answer.
+`project-kill-buffers' asks with a prompt of its own, and a prompt in
+the advice came first — through the advised `project-prompt-project-dir',
+which creates a group for the answer to a question the command then asks
+again.  And where the command finds no buffer to kill it returns the
+string of its own message, which is not nil, so the group went although
+nothing had."
+  (let (prompted killed)
+    (cl-letf* (((symbol-function 'project-current)
+                (lambda (&optional maybe-prompt _dir)
+                  (when maybe-prompt (setq prompted t))
+                  '(vc Git "/tmp/project/")))
+               ((symbol-function 'project-root) (lambda (_project) "/tmp/project/"))
+               ((symbol-function 'project-buffers)
+                (lambda (_project) (unless killed (list (current-buffer)))))
+               (command (lambda (&rest _)
+                          ;; what the command answers where it killed nothing
+                          (message "No buffers to kill"))))
+      ;; nothing killed: no group name, so no group closes
+      (should-not (auto-tab-groups-project--project-kill-buffers-advice command))
+      (should-not prompted)
+      ;; buffers gone: the root comes back
+      (setq killed t)
+      (should (equal (auto-tab-groups-project--project-kill-buffers-advice command)
+                     "/tmp/project/"))
+      (should-not prompted))))
+
 (ert-deftest auto-tab-groups-test-project-group-name ()
   "Without a project there is no group name."
   (should-not (auto-tab-groups-project-group-name "/does/not/exist/")))
@@ -316,6 +344,27 @@ no redraw brings it back."
   (should (memq 'tab-bar-format-menu-bar
                 auto-tab-groups-eyecandy-tab-bar-format)))
 
+(ert-deftest auto-tab-groups-test-icon-patterns-keep-their-case ()
+  "A pattern is matched with the case rules of whoever wrote it.
+`string-match-p' honours a buffer-local `case-fold-search', so the
+default \"HOME\" entry claimed \"[P] homelab\" in most buffers and not in
+others, and the icon of a group changed with the buffer redisplay
+happened to be in."
+  (let ((auto-tab-groups-eyecandy-icons '(("HOME" . "H")))
+        (auto-tab-groups-eyecandy-default-icon "D"))
+    (auto-tab-groups-eyecandy--forget)
+    (let ((case-fold-search t))
+      (should (equal (auto-tab-groups-eyecandy--get-group-icon "HOME") "H"))
+      (auto-tab-groups-eyecandy--forget)
+      (should (equal (auto-tab-groups-eyecandy--get-group-icon "[P] homelab") "D")))
+    ;; and the answer is kept, so the tab bar does not look it up again
+    (auto-tab-groups-eyecandy--forget)
+    (should (equal (auto-tab-groups-eyecandy--get-group-icon "HOME") "H"))
+    (let ((auto-tab-groups-eyecandy-icons '(("HOME" . "other"))))
+      (should (equal (auto-tab-groups-eyecandy--get-group-icon "HOME") "H"))
+      (auto-tab-groups-eyecandy--forget)
+      (should (equal (auto-tab-groups-eyecandy--get-group-icon "HOME") "other")))))
+
 (ert-deftest auto-tab-groups-test-drawable-asks-with-the-glyph-s-own-face ()
   "The question carries the face, so a nerd glyph is asked of its own font.
 The test before this one asked `internal-char-font\=' about the character
@@ -341,6 +390,40 @@ Sans in a mixed-pitch one."
       (setq asked nil)
       (should-not (auto-tab-groups-eyecandy--drawable-p ""))
       (should-not asked))))
+
+(defun auto-tab-groups-test--groups ()
+  "Return the group of each tab of this frame, in order."
+  (mapcar (lambda (tab) (alist-get 'group tab)) (tab-bar-tabs)))
+
+(ert-deftest auto-tab-groups-test-close-leaves-ungrouped-tabs-alone ()
+  "A nil group name closes nothing.
+An ungrouped tab carries nil as its group, so `tab-bar-close-group-tabs'
+took a nil name as a match for every one of them: measured with one
+grouped and two ungrouped tabs, both ungrouped ones went.  A close
+command whose name function answers nil reaches this."
+  (let ((tab-bar-tab-post-open-functions nil))
+    (tab-bar-change-tab-group "kept")
+    (tab-bar-new-tab)
+    (tab-bar-change-tab-group "")
+    (tab-bar-new-tab)
+    (tab-bar-change-tab-group "")
+    (should (equal (auto-tab-groups-test--groups) '("kept" nil nil)))
+    (auto-tab-groups--close-tab-group nil)
+    (should (equal (auto-tab-groups-test--groups) '("kept" nil nil)))
+    ;; and the named group still closes
+    (auto-tab-groups--close-tab-group "kept")
+    (should (equal (auto-tab-groups-test--groups) '(nil nil)))))
+
+(ert-deftest auto-tab-groups-test-close-keeps-the-sole-tab ()
+  "A group that holds every tab of the frame is left alone.
+`tab-bar-close-group-tabs' ends on the last tab, and `tab-bar-close-tab'
+answers that one with \"Attempt to delete the sole tab in a frame\" —
+which came out of the command the reader had just run."
+  (tab-bar-change-tab-group "only")
+  (should (equal (auto-tab-groups-test--groups) '("only")))
+  ;; no error, and the tab stays
+  (should-not (auto-tab-groups--close-tab-group "only"))
+  (should (equal (auto-tab-groups-test--groups) '("only"))))
 
 (ert-deftest auto-tab-groups-test-glyph-takes-a-row-of-candidates ()
   "The first candidate the frame can draw wins, and the last always answers.
