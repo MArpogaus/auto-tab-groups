@@ -141,28 +141,36 @@ https://github.com/seagle0128/doom-modeline/blob/ec6bc00ac035e75ad10b52e516ea5d9
     (propertize "|" 'face (and color (list :foreground color
                                            :background color)))))
 
-(defun auto-tab-groups-eyecandy--displayable-p (char)
-  "Return non-nil when the selected frame has a glyph for CHAR.
-`char-displayable-p' answers for the character set and not for the
-font, so on a graphical frame ask the font instead.  Nerd font
-glyphs live in the private use area, and without the font they draw
-as a hex box."
-  (if (display-graphic-p)
-      (internal-char-font nil char)
-    (char-displayable-p char)))
+(defun auto-tab-groups-eyecandy--drawable-p (string)
+  "Return non-nil if this frame will draw the first character of STRING.
+
+The question is asked of STRING, so the face STRING carries is part of
+it.  That is the whole point: a nerd-icons glyph names
+`nerd-icons-font-family\=' of its own, and asking instead whether the
+buffer\='s default font has the character answers for a font that draws
+nothing here.  Measured in a buffer where `mixed-pitch-mode\=' remaps
+`default\=' to a proportional family — every Org buffer, for a reader who
+turns that on — the same character resolves to that family, so every
+nerd glyph reads as missing and every icon falls back to its plain
+candidate.
+
+`font-at\=' answers with the font that will really draw the character:
+the one the face names, the one a fallback finds for it, or nil where
+none will.  A string with no face of its own asks the frame\='s font,
+which is what the tab bar draws in."
+  (and (stringp string)
+       (not (string-empty-p string))
+       (if (display-graphic-p)
+           (font-at 0 nil string)
+         (char-displayable-p (aref string 0)))))
 
 (defun auto-tab-groups-eyecandy--glyph (&rest candidates)
-  "Return the first of CANDIDATES the frame can draw.
-The last one is the answer when it can draw none of them, so keep a
+  "Return the first of CANDIDATES this frame can draw.
+The last one is the answer where it can draw none of them, so keep a
 plain character there.  nerd-icons answers with a glyph whether or not
 the frame has the font, and a nerd font glyph without the font is a hex
-box.  The tab marker asks the same question of its own character."
-  (or (seq-find (lambda (candidate)
-                  (and (stringp candidate)
-                       (> (length candidate) 0)
-                       (auto-tab-groups-eyecandy--displayable-p
-                        (aref candidate 0))))
-                (butlast candidates))
+box."
+  (or (seq-find #'auto-tab-groups-eyecandy--drawable-p (butlast candidates))
       (car (last candidates))))
 
 (defun auto-tab-groups-eyecandy--nerd-icon (icon-spec)
