@@ -160,9 +160,12 @@ customization and may not be modified."
      (t
       (append (list :tab-group-name (car spec)) (cdr spec))))))
 
-(defun auto-tab-groups--switch-tab-group (tab)
-  "Switch to TAB, the first tab of the wanted tab group."
-  (tab-bar-select-tab (1+ (tab-bar--tab-index tab)))
+(defun auto-tab-groups--switch-tab-group (tab tabs)
+  "Switch to TAB, the first tab of the wanted tab group, among TABS.
+The index comes from the list the caller searched: `tab-bar--tab-index\='
+walks the list of the moment and answers nil for a tab that is not in
+it, and `1+\=' of nil is an error rather than a missing tab."
+  (tab-bar-select-tab (1+ (seq-position tabs tab)))
   (when auto-tab-groups-echo-mode
     (message "Switched to tab group: %s" (alist-get 'group tab))))
 
@@ -173,14 +176,33 @@ customization and may not be modified."
 (defun auto-tab-groups--switch-or-create-tab-group (tab-group-name)
   "Switch to or create a tab group with the name TAB-GROUP-NAME."
   (when tab-group-name
-    (if-let* ((existing-tab (auto-tab-groups--find-tab-by-group-name tab-group-name)))
-        (auto-tab-groups--switch-tab-group existing-tab)
-      (auto-tab-groups-new-group tab-group-name))))
+    (let ((tabs (funcall tab-bar-tabs-function)))
+      (if-let* ((existing-tab (seq-find (lambda (tab)
+                                          (equal tab-group-name
+                                                 (alist-get 'group tab)))
+                                        tabs)))
+          (auto-tab-groups--switch-tab-group existing-tab tabs)
+        (auto-tab-groups-new-group tab-group-name)))))
 
 (defun auto-tab-groups--close-tab-group (tab-group-name)
   "Close the tab group with the name TAB-GROUP-NAME.
-Nothing happens when no such group exists."
-  (when (auto-tab-groups--find-tab-by-group-name tab-group-name)
+Nothing happens where no such group exists, nor in two cases that used
+to end badly.
+
+A nil name: an ungrouped tab carries nil as its group, so nil matches
+every one of them, and `tab-bar-close-group-tabs\=' then deleted the lot.
+Measured with one grouped and two ungrouped tabs, both ungrouped ones
+went.  A close command whose name function answers nil reaches this.
+
+A group that holds every tab of the frame: `tab-bar-close-group-tabs\='
+ends on the last tab, and `tab-bar-close-tab\=' refuses that one with
+\"Attempt to delete the sole tab in a frame\" — which came out of the
+command the reader had just run."
+  (when (and tab-group-name
+             (auto-tab-groups--find-tab-by-group-name tab-group-name)
+             (seq-some (lambda (tab)
+                         (not (equal tab-group-name (alist-get 'group tab))))
+                       (funcall tab-bar-tabs-function)))
     (run-hooks 'auto-tab-groups-before-delete-hook)
     (tab-bar-close-group-tabs tab-group-name)
     (when auto-tab-groups-echo-mode
@@ -238,14 +260,14 @@ Nothing happens when no such group exists."
 (defun auto-tab-groups--after-make-frame-function (&optional frame)
   "Initialize new group or clone existing one when new FRAME is created."
   (let ((tab-group-name (funcall tab-bar-tab-group-function (tab-bar--current-tab))))
-    (when frame (select-frame frame))
-    (tab-group (if tab-group-name tab-group-name auto-tab-groups-initial-group-name))))
+    ;; `select-frame\=' without a restore leaves the wrong frame selected
+    ;; for whoever made one it did not mean to show.
+    (with-selected-frame (or frame (selected-frame))
+      (tab-group (or tab-group-name auto-tab-groups-initial-group-name)))))
 
 (defun auto-tab-groups--commands (command-data)
   "Return the list of commands named by COMMAND-DATA."
-  (if (listp (car command-data))
-      (car command-data)
-    (list (car command-data))))
+  (ensure-list (car command-data)))
 
 (defun auto-tab-groups--advice-name (kind)
   "Return the name under which advice of KIND is registered.
