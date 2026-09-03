@@ -31,7 +31,6 @@
 (require 'cl-lib)
 (require 'auto-tab-groups)
 (require 'auto-tab-groups-project)
-(require 'auto-tab-groups-eyecandy)
 
 (defvar auto-tab-groups-test--switched nil
   "Group name the stubbed switch function received.")
@@ -202,41 +201,6 @@ must get the command\='s and not the bookkeeping\='s."
         (should (eq (funcall advice #'auto-tab-groups-test--command) 'result))
         (should (equal closed "group"))))))
 
-(ert-deftest auto-tab-groups-test-icon-falls-back-without-the-font ()
-  "A glyph the frame cannot draw comes back as a plain character.
-nerd-icons answers with the glyph whether or not the font is there,
-and without it the tab bar shows a hex box."
-  (cl-letf (((symbol-function 'nerd-icons-mdicon) (lambda (&rest _) "")))
-    (cl-letf (((symbol-function 'auto-tab-groups-eyecandy--drawable-p)
-               (lambda (&rest _) t)))
-      (should (equal (auto-tab-groups-eyecandy--icon
-                      '(:style "md" :icon "flash"))
-                     "")))
-    (cl-letf (((symbol-function 'auto-tab-groups-eyecandy--drawable-p)
-               #'ignore))
-      (should (equal (auto-tab-groups-eyecandy--icon
-                      '(:style "md" :icon "flash"))
-                     "?"))))
-  ;; a plain string icon is nobody's font problem
-  (should (equal (auto-tab-groups-eyecandy--icon "x") "x")))
-
-(ert-deftest auto-tab-groups-test-spacer-is-plain-in-a-terminal ()
-  "The tab bar spacer carries no `space-width\=' in a terminal.
-One such item anywhere in the format leaves the whole bar row
-unpainted there, so the row keeps whatever stood in it before."
-  (cl-letf (((symbol-function 'display-graphic-p) (lambda (&rest _) t)))
-    (should (equal (get-text-property
-                    0 'display (auto-tab-groups-eyecandy--wide-spacer))
-                   '(space-width 0.75))))
-  (cl-letf (((symbol-function 'display-graphic-p) #'ignore))
-    (let ((item (auto-tab-groups-eyecandy--wide-spacer)))
-      (should (equal item " "))
-      (should-not (get-text-property 0 'display item))))
-  ;; the format holds the names of the two spacers, so a value from
-  ;; customize can round trip
-  (should (memq 'auto-tab-groups-eyecandy--wide-spacer
-                auto-tab-groups-eyecandy-tab-bar-format)))
-
 (ert-deftest auto-tab-groups-test-find-tab-by-group-name ()
   "Tabs are found by their group name."
   (cl-letf (((symbol-function 'tab-bar-tabs-function)
@@ -306,93 +270,6 @@ the project one came from."
           (should-not (auto-tab-groups-project-group-name "no such project")))
       (delete-directory dir t))))
 
-(ert-deftest auto-tab-groups-test-the-old-names-still-answer ()
-  "The names that a configuration may hold still work.
-Both are user facing: one is an option, the other is named in a
-`tab-bar-format\='."
-  (should (eq (indirect-variable
-               'auto-tab-groups-eyecandy-tab-bar-group-name-format-function)
-              'auto-tab-groups-eyecandy-group-name-function))
-  (should (eq (symbol-function 'auto-tab-groups-new-group--tab-bar-format-new)
-              'auto-tab-groups-eyecandy-format-new-button)))
-
-(ert-deftest auto-tab-groups-test-a-bar-without-a-color-has-no-face ()
-  "A separator without a color wears no face at all.
-A face attribute of nil is not \"leave it alone\": the display logs it
-as an invalid attribute, twice for each redisplay of the tab bar."
-  (cl-letf (((symbol-function 'display-graphic-p) #'ignore))
-    (should-not (get-text-property
-                 0 'face (auto-tab-groups-eyecandy--get-bar-image 25 2 nil)))
-    (should (equal (get-text-property
-                    0 'face (auto-tab-groups-eyecandy--get-bar-image 25 2 "red"))
-                   '(:foreground "red" :background "red")))))
-
-(ert-deftest auto-tab-groups-test-no-menu-button-in-a-terminal ()
-  "The bar of a terminal carries no menu button.
-A terminal paints the row of the bar in the redisplay that turns the
-bar on.  With the menu button in the format, a tab that changes before
-that redisplay leaves the row blank for the rest of the session, and
-no redraw brings it back."
-  (cl-letf (((symbol-function 'display-graphic-p) (lambda (&rest _) t)))
-    (should (equal (auto-tab-groups-eyecandy--tab-bar-format)
-                   auto-tab-groups-eyecandy-tab-bar-format)))
-  (cl-letf (((symbol-function 'display-graphic-p) #'ignore))
-    (let ((format (auto-tab-groups-eyecandy--tab-bar-format)))
-      (should-not (memq 'tab-bar-format-menu-bar format))
-      ;; and the rest of the format stands
-      (should (equal format (remq 'tab-bar-format-menu-bar
-                                  auto-tab-groups-eyecandy-tab-bar-format)))))
-  ;; the option keeps the button, so a graphic display has it
-  (should (memq 'tab-bar-format-menu-bar
-                auto-tab-groups-eyecandy-tab-bar-format)))
-
-(ert-deftest auto-tab-groups-test-icon-patterns-keep-their-case ()
-  "A pattern is matched with the case rules of whoever wrote it.
-`string-match-p' honours a buffer-local `case-fold-search', so the
-default \"HOME\" entry claimed \"[P] homelab\" in most buffers and not in
-others, and the icon of a group changed with the buffer redisplay
-happened to be in."
-  (let ((auto-tab-groups-eyecandy-icons '(("HOME" . "H")))
-        (auto-tab-groups-eyecandy-default-icon "D"))
-    (auto-tab-groups-eyecandy--forget)
-    (let ((case-fold-search t))
-      (should (equal (auto-tab-groups-eyecandy--get-group-icon "HOME") "H"))
-      (auto-tab-groups-eyecandy--forget)
-      (should (equal (auto-tab-groups-eyecandy--get-group-icon "[P] homelab") "D")))
-    ;; and the answer is kept, so the tab bar does not look it up again
-    (auto-tab-groups-eyecandy--forget)
-    (should (equal (auto-tab-groups-eyecandy--get-group-icon "HOME") "H"))
-    (let ((auto-tab-groups-eyecandy-icons '(("HOME" . "other"))))
-      (should (equal (auto-tab-groups-eyecandy--get-group-icon "HOME") "H"))
-      (auto-tab-groups-eyecandy--forget)
-      (should (equal (auto-tab-groups-eyecandy--get-group-icon "HOME") "other")))))
-
-(ert-deftest auto-tab-groups-test-drawable-asks-with-the-glyph-s-own-face ()
-  "The question carries the face, so a nerd glyph is asked of its own font.
-The test before this one asked `internal-char-font\=' about the character
-alone, which answers for the default font of the selected window\='s
-buffer.  In an Org buffer with `mixed-pitch-mode\=' that font is a
-proportional family with no nerd glyphs, so every icon came back as
-`?\=' the moment such a buffer was current — measured, the same
-character resolves to Source Code Pro in a plain buffer and to DejaVu
-Sans in a mixed-pitch one."
-  (let (asked)
-    (cl-letf (((symbol-function 'display-graphic-p) (lambda (&rest _) t))
-              ((symbol-function 'font-at)
-               (lambda (position _window string)
-                 (setq asked (list position string))
-                 'a-font)))
-      (let ((icon (propertize "x" 'face '(:family "Symbols Nerd Font Mono"))))
-        (should (auto-tab-groups-eyecandy--drawable-p icon))
-        (should (equal (car asked) 0))
-        ;; the face travelled into the question, which is the whole fix
-        (should (equal (get-text-property 0 'face (cadr asked))
-                       '(:family "Symbols Nerd Font Mono"))))
-      ;; and an empty candidate is not asked about at all
-      (setq asked nil)
-      (should-not (auto-tab-groups-eyecandy--drawable-p ""))
-      (should-not asked))))
-
 (defun auto-tab-groups-test--groups ()
   "Return the group of each tab of this frame, in order."
   (mapcar (lambda (tab) (alist-get 'group tab)) (tab-bar-tabs)))
@@ -427,18 +304,3 @@ which came out of the command the reader had just run."
   (should-not (auto-tab-groups--close-tab-group "only"))
   (should (equal (auto-tab-groups-test--groups) '("only"))))
 
-(ert-deftest auto-tab-groups-test-glyph-takes-a-row-of-candidates ()
-  "The first candidate the frame can draw wins, and the last always answers.
-The bars ask for a glyph of the material family first, the one that was
-there before it second, and a plain character last."
-  (cl-letf (((symbol-function 'auto-tab-groups-eyecandy--drawable-p)
-             ;; a frame with the second candidate only
-             (lambda (string) (equal string "b"))))
-    (should (equal (auto-tab-groups-eyecandy--glyph "a" "b" "c") "b"))
-    (should (equal (auto-tab-groups-eyecandy--glyph "a" "x" "c") "c"))
-    (should (equal (auto-tab-groups-eyecandy--glyph "b") "b"))
-    ;; nothing to ask about an empty candidate
-    (should (equal (auto-tab-groups-eyecandy--glyph "" "c") "c"))))
-
-(provide 'auto-tab-groups-test)
-;;; auto-tab-groups-test.el ends here

@@ -2,7 +2,7 @@
 (dolist (p '("auto-tab-groups"))
   (add-to-list 'load-path (concat "/home/marcel/.emacs.d/packages/" p)))
 (require 'auto-tab-groups)
-(require 'auto-tab-groups-eyecandy)
+(require 'modern-tab-bar)
 (require 'auto-tab-groups-project)
 (require 'project)
 (setq inhibit-startup-screen t ring-bell-function #'ignore)
@@ -16,13 +16,13 @@
       (car (last candidates))))
 
 (defun demo--config ()
-  (setq auto-tab-groups-eyecandy-tab-height 26
-        auto-tab-groups-eyecandy-icons
+  (setq modern-tab-bar-indicator-height 26
+        modern-tab-bar-icons
         `(("HOME" . ,(demo--icon "⌂" "λ"))
           ("^\\[P\\] *" . ,(demo--icon "▸" ">"))
           ("customize" . ,(demo--icon "☰" "=")))
-        auto-tab-groups-eyecandy-default-icon (demo--icon "●" "*")
-        auto-tab-groups-eyecandy-tab-bar-group-name-format-function
+        modern-tab-bar-default-icon (demo--icon "●" "*")
+        modern-tab-bar-group-name-function
         (lambda (n) (if (string-match "^\\[.\\] *" n)
                         (substring n (match-end 0))
                       n))
@@ -32,7 +32,7 @@
         '((Custom-buffer-done "customize" :ignore-result t))
         project-switch-commands #'project-find-file)
   (auto-tab-groups-project-mode 1)
-  (auto-tab-groups-eyecandy-mode 1)
+  (modern-tab-bar-mode 1)
   (auto-tab-groups-mode 1)
   (tab-bar-mode 1)
   (dolist (d '("/home/marcel/.emacs.d/packages/pycell/"
