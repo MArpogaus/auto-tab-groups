@@ -49,7 +49,7 @@ a group of its own.  The group closes when you close the work.
 *** Prerequisites
 
 - Emacs 29.1 or later, with =tab-bar.el= and =project.el=.
-- [[https://github.com/rainstormstudio/nerd-icons.el][nerd-icons]] for the icons of [[https://github.com/MArpogaus/modern-tabbars][modern-tabbars]], which draws the tab bar in
+- [[https://github.com/rainstormstudio/nerd-icons.el][nerd-icons]] for the icons of [[https://github.com/MArpogaus/modern-tab-bars][modern-tab-bars]], which draws the tab bar in
   the pictures here.  That package is
   optional.
 
@@ -86,7 +86,7 @@ Each project gets a tab group:
     (auto-tab-groups-mode))
 #+end_src
 
-The look in the picture above is [[https://github.com/MArpogaus/modern-tabbars][modern-tabbars]], which dresses the tab
+The look in the picture above is [[https://github.com/MArpogaus/modern-tab-bars][modern-tab-bars]], which dresses the tab
 bar and the tab line and knows nothing about tab groups being made
 automatically.  It used to live here, as =auto-tab-groups-eyecandy=.
 
@@ -129,11 +129,11 @@ groups, and a shorter name for a project group:
 #+end_src
 
 The icon on each group and the height of the tabs belong to
-[[https://github.com/MArpogaus/modern-tabbars][modern-tabbars]]:
+[[https://github.com/MArpogaus/modern-tab-bars][modern-tab-bars]]:
 
 #+begin_src emacs-lisp
   (use-package modern-tab-bar
-    :vc (:url "https://github.com/MArpogaus/modern-tabbars")
+    :vc (:url "https://github.com/MArpogaus/modern-tab-bars")
     :custom
     (modern-tab-bar-indicator-height 25)
     (modern-tab-bar-icons
