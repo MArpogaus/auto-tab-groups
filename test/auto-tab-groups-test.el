@@ -88,8 +88,8 @@
   "Advice is removed again.
 Each call to the advice constructor returns a fresh closure, so the
 advice carries a name; without it the advice would stay behind."
-  (let ((data '(auto-tab-groups-test--command . "group"))
-        (name (auto-tab-groups--advice-name 'create)))
+  (let* ((data '(auto-tab-groups-test--command . "group"))
+         (name (auto-tab-groups--advice-name 'create data)))
     (unwind-protect
         (progn
           (auto-tab-groups--advice-add 'create data)
@@ -97,6 +97,25 @@ advice carries a name; without it the advice would stay behind."
           (auto-tab-groups--advice-remove 'create data)
           (should-not (advice-member-p name 'auto-tab-groups-test--command)))
       (advice-remove 'auto-tab-groups-test--command name))))
+
+(ert-deftest auto-tab-groups-test-two-rules-on-one-command ()
+  "Two rules that name one command are two pieces of advice.
+The name of a piece of advice held the kind of the rule and nothing
+else, and `advice-add' takes advice of a name that is there already
+off the command first: the second rule replaced the first, and only
+the group of the second was ever made."
+  (let* ((first '(auto-tab-groups-test--command . "one"))
+         (second '(auto-tab-groups-test--command . "two"))
+         (names (list (auto-tab-groups--advice-name 'create first)
+                      (auto-tab-groups--advice-name 'create second))))
+    (unwind-protect
+        (progn
+          (auto-tab-groups--advice-add 'create first)
+          (auto-tab-groups--advice-add 'create second)
+          (dolist (name names)
+            (should (advice-member-p name 'auto-tab-groups-test--command))))
+      (dolist (name names)
+        (advice-remove 'auto-tab-groups-test--command name)))))
 
 (ert-deftest auto-tab-groups-test-create-advice-static-name ()
   "A static group name is created before the command runs."
@@ -313,18 +332,60 @@ switch to that tab instead of doing the work."
   "The advice comes off the commands it went on.
 The options may change while the mode is on: the advice on the commands
 they named before must still be removable."
-  (let ((auto-tab-groups-create-commands
-         '((auto-tab-groups-test--command . "group")))
-        (auto-tab-groups-close-commands nil)
-        (auto-tab-groups-initial-group-name nil)
-        (auto-tab-groups--advised nil)
-        (name (auto-tab-groups--advice-name 'create)))
+  (let* ((data '(auto-tab-groups-test--command . "group"))
+         (auto-tab-groups-create-commands (list data))
+         (auto-tab-groups-close-commands nil)
+         (auto-tab-groups-initial-group-name nil)
+         (auto-tab-groups--advised nil)
+         (name (auto-tab-groups--advice-name 'create data)))
     (unwind-protect
         (progn
           (auto-tab-groups--setup)
           (should (advice-member-p name 'auto-tab-groups-test--command))
           ;; the reader changes the option while the mode is on
           (setq auto-tab-groups-create-commands nil)
+          (auto-tab-groups--teardown)
+          (should-not (advice-member-p name 'auto-tab-groups-test--command)))
+      (advice-remove 'auto-tab-groups-test--command name))))
+
+(ert-deftest auto-tab-groups-test-a-rule-added-while-on-is-advised ()
+  "A rule the reader adds while the mode is on is advised at once.
+The advice went on the commands the options named when the mode went
+on, so a rule added afterwards waited for the next toggle of the mode."
+  (let* ((auto-tab-groups-mode t)
+         (data '(auto-tab-groups-test--command . "group"))
+         (auto-tab-groups-create-commands nil)
+         (auto-tab-groups-close-commands nil)
+         (auto-tab-groups-initial-group-name nil)
+         (auto-tab-groups--advised nil)
+         (name (auto-tab-groups--advice-name 'create data)))
+    (unwind-protect
+        (progn
+          (auto-tab-groups--setup)
+          (should-not (advice-member-p name 'auto-tab-groups-test--command))
+          (auto-tab-groups--set-option 'auto-tab-groups-create-commands
+                                       (list data))
+          (should (advice-member-p name 'auto-tab-groups-test--command))
+          ;; and a rule taken away again takes its advice with it
+          (auto-tab-groups--set-option 'auto-tab-groups-create-commands nil)
+          (should-not (advice-member-p name 'auto-tab-groups-test--command)))
+      (advice-remove 'auto-tab-groups-test--command name))))
+
+(ert-deftest auto-tab-groups-test-a-rule-that-signals-leaves-a-record ()
+  "What went on the commands before a bad rule still comes off again.
+The rules are advised one after the other, so one that signals stops
+the setup half way through.  Each rule is therefore written down
+before its advice goes on, and not after."
+  (let* ((data '(auto-tab-groups-test--command . "group"))
+         (auto-tab-groups-create-commands (list data '("not a command" . "x")))
+         (auto-tab-groups-close-commands nil)
+         (auto-tab-groups-initial-group-name nil)
+         (auto-tab-groups--advised nil)
+         (name (auto-tab-groups--advice-name 'create data)))
+    (unwind-protect
+        (progn
+          (should-error (auto-tab-groups--setup) :type 'wrong-type-argument)
+          (should (advice-member-p name 'auto-tab-groups-test--command))
           (auto-tab-groups--teardown)
           (should-not (advice-member-p name 'auto-tab-groups-test--command)))
       (advice-remove 'auto-tab-groups-test--command name))))
