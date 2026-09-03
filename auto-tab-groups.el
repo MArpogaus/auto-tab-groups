@@ -209,40 +209,47 @@ command the reader had just run."
       (message "Closed tab group: %s" tab-group-name))
     (run-hooks 'auto-tab-groups-after-delete-hook)))
 
+(defun auto-tab-groups--create-before (name orig-fun args)
+  "Open the group NAME, then run ORIG-FUN on ARGS in it.
+The name is known before the command runs, so the group is there to run
+it in."
+  (auto-tab-groups--switch-or-create-tab-group name)
+  (apply orig-fun args))
+
+(defun auto-tab-groups--create-after (name-function orig-fun args)
+  "Run ORIG-FUN on ARGS, then open the group NAME-FUNCTION names for it.
+The group name is only known once the command has run, and by then the
+command has shown whatever it produced in the tab that was current.
+That tab is left as it was and the buffer goes along to the group it
+belongs to."
+  (let* ((buffer (current-buffer))
+         (windows (current-window-configuration))
+         (results (apply orig-fun args))
+         (shown (current-buffer))
+         (name (funcall name-function results))
+         ;; A command that only prompts shows no buffer and the new tab
+         ;; stays as it is.  Switching to the buffer that was current
+         ;; already changes nothing to compare, so a returned buffer is
+         ;; the only sign of one being shown.
+         (carry (and name
+                     (or (buffer-live-p results)
+                         (not (eq shown buffer)))
+                     (not (equal name (auto-tab-groups--current-group))))))
+    (when carry (set-window-configuration windows))
+    (auto-tab-groups--switch-or-create-tab-group name)
+    (when (and carry (buffer-live-p shown)) (switch-to-buffer shown))
+    results))
+
 (defun auto-tab-groups--get-create-advice (tab-group-spec)
   "Get advice function to handle tab group creation based on TAB-GROUP-SPEC."
   (lambda (orig-fun &rest args)
-    (let* ((tab-group-name-or-func (plist-get tab-group-spec :tab-group-name))
-           (tab-group-name-functionp (functionp tab-group-name-or-func))
-           (ignore-result (plist-get tab-group-spec :ignore-result)))
-      (if (or (not tab-group-name-functionp) ignore-result)
-          (let ((tab-group-name (if tab-group-name-functionp (funcall tab-group-name-or-func)
-                                  tab-group-name-or-func)))
-            (auto-tab-groups--switch-or-create-tab-group tab-group-name)
-            (apply orig-fun args))
-        ;; The group name is only known once the command has run, and
-        ;; by then the command has shown whatever it produced in the
-        ;; tab that was current.  Leave that tab as it was and take
-        ;; the buffer along to the group it belongs to.
-        (let* ((buffer (current-buffer))
-               (windows (current-window-configuration))
-               (results (apply orig-fun args))
-               (shown (current-buffer))
-               (tab-group-name (if tab-group-name-functionp (funcall tab-group-name-or-func results)
-                                 tab-group-name-or-func))
-               ;; A command that only prompts shows no buffer and the
-               ;; new tab stays as it is.  Switching to the buffer that
-               ;; was current already changes nothing to compare, so a
-               ;; returned buffer is the only sign of one being shown.
-               (carry (and tab-group-name
-                           (or (buffer-live-p results)
-                               (not (eq shown buffer)))
-                           (not (equal tab-group-name
-                                       (auto-tab-groups--current-group))))))
-          (when carry (set-window-configuration windows))
-          (auto-tab-groups--switch-or-create-tab-group tab-group-name)
-          (when (and carry (buffer-live-p shown)) (switch-to-buffer shown))
-          results)))))
+    (let* ((name-or-function (plist-get tab-group-spec :tab-group-name))
+           (functionp (functionp name-or-function)))
+      (if (or (not functionp) (plist-get tab-group-spec :ignore-result))
+          (auto-tab-groups--create-before
+           (if functionp (funcall name-or-function) name-or-function)
+           orig-fun args)
+        (auto-tab-groups--create-after name-or-function orig-fun args)))))
 
 (defun auto-tab-groups--get-close-advice (tab-group-spec)
   "Get advice function to handle tab group closing based on TAB-GROUP-SPEC."
