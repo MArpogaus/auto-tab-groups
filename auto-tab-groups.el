@@ -39,6 +39,16 @@
   "Automatically create and delete tab groups based on command execution."
   :group 'project)
 
+(defun auto-tab-groups--set-option (symbol value)
+  "Set SYMBOL to VALUE, and follow the new value while the mode is on.
+The advice sits on the commands the options named when the mode went
+on, so a change made afterwards would otherwise wait for the next
+toggle of the mode."
+  (set-default symbol value)
+  (when (bound-and-true-p auto-tab-groups-mode)
+    (auto-tab-groups--teardown)
+    (auto-tab-groups--setup)))
+
 (defcustom auto-tab-groups-create-commands nil
   "Alist mapping commands to tab group specifications for creation.
 
@@ -67,6 +77,7 @@ Example:
 
 See `auto-tab-groups-project-group-name' for a group name that follows
 the current project."
+  :set #'auto-tab-groups--set-option
   :type '(alist :key-type (choice symbol (repeat symbol))
                 :value-type (choice string function (plist :key-type symbol
                                                            :value-type (choice string function boolean)))))
@@ -93,13 +104,18 @@ Example:
 
 See `auto-tab-groups-project-group-name' for a group name that follows
 the current project."
+  :set #'auto-tab-groups--set-option
   :type '(alist :key-type (choice symbol (repeat symbol))
                 :value-type (choice string function (plist :key-type symbol
                                                            :value-type (choice string function boolean)))))
 
 (defcustom auto-tab-groups-initial-group-name "HOME"
-  "Define the name of the tab group created in new frames."
-  :type 'string)
+  "Define the name of the tab group created in new frames.
+A new frame that comes from a frame with a group of its own keeps that
+group; this is the name for the frames that have none.  Nil leaves
+every new frame alone."
+  :set #'auto-tab-groups--set-option
+  :type '(choice (const :tag "Leave them alone" nil) string))
 
 (defcustom auto-tab-groups-new-choice "*scratch*"
   "Adjust the behavior when a new tab is created.
@@ -291,12 +307,17 @@ belongs to."
   "Return the list of commands named by COMMAND-DATA."
   (ensure-list (car command-data)))
 
-(defun auto-tab-groups--advice-name (kind)
-  "Return the name under which advice of KIND is registered.
+(defun auto-tab-groups--advice-name (kind command-data)
+  "Return the name under which the advice of COMMAND-DATA is registered.
 KIND is either the symbol `create' or the symbol `close'.  The advice
 carries a name because each call to the advice constructor returns a
-fresh closure, which `advice-remove' could not find again."
-  (intern (format "auto-tab-groups--%s" kind)))
+fresh closure, which `advice-remove' could not find again.
+
+The rule is part of the name, and not the kind alone.  `advice-add'
+takes advice of a name that is there already off the command first, so
+two rules that name one command shared one piece of advice: the second
+replaced the first, and only the group of the second was ever made."
+  (intern (format "auto-tab-groups--%s-%s" kind (sxhash-equal command-data))))
 
 (defun auto-tab-groups--advice-add (kind command-data)
   "Advise the commands in COMMAND-DATA to manage tab groups.
@@ -304,16 +325,18 @@ KIND is either the symbol `create' or the symbol `close'."
   (let ((tab-group-spec (auto-tab-groups--get-group-spec command-data))
         (get-advice-fun (if (eq kind 'create)
                             #'auto-tab-groups--get-create-advice
-                          #'auto-tab-groups--get-close-advice)))
+                          #'auto-tab-groups--get-close-advice))
+        (name (auto-tab-groups--advice-name kind command-data)))
     (dolist (command (auto-tab-groups--commands command-data))
       (advice-add command :around (funcall get-advice-fun tab-group-spec)
-                  `((name . ,(auto-tab-groups--advice-name kind)))))))
+                  `((name . ,name))))))
 
 (defun auto-tab-groups--advice-remove (kind command-data)
   "Remove the advice of KIND from the commands in COMMAND-DATA.
 KIND is either the symbol `create' or the symbol `close'."
-  (dolist (command (auto-tab-groups--commands command-data))
-    (advice-remove command (auto-tab-groups--advice-name kind))))
+  (let ((name (auto-tab-groups--advice-name kind command-data)))
+    (dolist (command (auto-tab-groups--commands command-data))
+      (advice-remove command name))))
 
 (defvar auto-tab-groups--advised nil
   "What the advice went on, as a list of (KIND . COMMAND-DATA).
@@ -322,23 +345,31 @@ come off the commands it went on rather than off the ones the options
 name by the time the mode goes off.")
 
 (defun auto-tab-groups--setup ()
-  "Setup advice for commands specified in the configuration."
+  "Advise the commands the two options name, and follow new frames.
+A rule is written down before its advice goes on the commands.  A rule
+that signals half way through then leaves advice the teardown knows
+about, where a record written afterwards would have lost it."
   (dolist (command-data auto-tab-groups-create-commands)
-    (auto-tab-groups--advice-add 'create command-data)
-    (push (cons 'create command-data) auto-tab-groups--advised))
+    (push (cons 'create command-data) auto-tab-groups--advised)
+    (auto-tab-groups--advice-add 'create command-data))
   (dolist (command-data auto-tab-groups-close-commands)
-    (auto-tab-groups--advice-add 'close command-data)
-    (push (cons 'close command-data) auto-tab-groups--advised))
+    (push (cons 'close command-data) auto-tab-groups--advised)
+    (auto-tab-groups--advice-add 'close command-data))
   (when auto-tab-groups-initial-group-name
-    (auto-tab-groups--after-make-frame-function)
     (add-hook 'after-make-frame-functions #'auto-tab-groups--after-make-frame-function)))
 
 (defun auto-tab-groups--teardown ()
-  "Remove the advice from the commands it was added to."
+  "Remove the advice from the commands it was added to.
+The hook comes off first, and a record that cannot be honoured is
+reported and skipped rather than left to stop the rest.  A rule that
+names something other than a command signals in the setup, and its
+record is there because a record is written before the advice goes
+on."
+  (remove-hook 'after-make-frame-functions #'auto-tab-groups--after-make-frame-function)
   (pcase-dolist (`(,kind . ,command-data) auto-tab-groups--advised)
-    (auto-tab-groups--advice-remove kind command-data))
-  (setq auto-tab-groups--advised nil)
-  (remove-hook 'after-make-frame-functions #'auto-tab-groups--after-make-frame-function))
+    (with-demoted-errors "auto-tab-groups: %S"
+      (auto-tab-groups--advice-remove kind command-data)))
+  (setq auto-tab-groups--advised nil))
 
 ;;;###autoload
 (define-minor-mode auto-tab-groups-mode
@@ -346,7 +377,14 @@ name by the time the mode goes off.")
   :global t
   :group 'auto-tab-groups
   (if auto-tab-groups-mode
-      (auto-tab-groups--setup)
+      (progn
+        (auto-tab-groups--setup)
+        ;; The frame that turns the mode on wants its group too, and only
+        ;; here: the setup runs again for every option a reader changes
+        ;; while the mode is on, and that must not put the current tab
+        ;; into a group nobody asked for.
+        (when auto-tab-groups-initial-group-name
+          (auto-tab-groups--after-make-frame-function)))
     (auto-tab-groups--teardown)))
 
 ;;;###autoload
