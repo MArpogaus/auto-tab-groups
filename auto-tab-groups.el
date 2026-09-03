@@ -162,9 +162,9 @@ customization and may not be modified."
 
 (defun auto-tab-groups--switch-tab-group (tab tabs)
   "Switch to TAB, the first tab of the wanted tab group, among TABS.
-The index comes from the list the caller searched: `tab-bar--tab-index\\='
+The index comes from the list the caller searched: `tab-bar--tab-index'
 walks the list of the moment and answers nil for a tab that is not in
-it, and `1+\\=' of nil is an error rather than a missing tab."
+it, and `1+' of nil is an error rather than a missing tab."
   (tab-bar-select-tab (1+ (seq-position tabs tab)))
   (when auto-tab-groups-echo-mode
     (message "Switched to tab group: %s" (alist-get 'group tab))))
@@ -190,12 +190,12 @@ Nothing happens where no such group exists, nor in two cases that used
 to end badly.
 
 A nil name: an ungrouped tab carries nil as its group, so nil matches
-every one of them, and `tab-bar-close-group-tabs\\=' then deleted the lot.
+every one of them, and `tab-bar-close-group-tabs' then deleted the lot.
 Measured with one grouped and two ungrouped tabs, both ungrouped ones
 went.  A close command whose name function answers nil reaches this.
 
-A group that holds every tab of the frame: `tab-bar-close-group-tabs\\='
-ends on the last tab, and `tab-bar-close-tab\\=' refuses that one with
+A group that holds every tab of the frame: `tab-bar-close-group-tabs'
+ends on the last tab, and `tab-bar-close-tab' refuses that one with
 \"Attempt to delete the sole tab in a frame\" — which came out of the
 command the reader had just run."
   (when (and tab-group-name
@@ -260,7 +260,7 @@ command the reader had just run."
 (defun auto-tab-groups--after-make-frame-function (&optional frame)
   "Initialize new group or clone existing one when new FRAME is created."
   (let ((tab-group-name (funcall tab-bar-tab-group-function (tab-bar--current-tab))))
-    ;; `select-frame\\=' without a restore leaves the wrong frame selected
+    ;; `select-frame' without a restore leaves the wrong frame selected
     ;; for whoever made one it did not mean to show.
     (with-selected-frame (or frame (selected-frame))
       (tab-group (or tab-group-name auto-tab-groups-initial-group-name)))))
