@@ -11,6 +11,18 @@ to use the package.
 =auto-tab-groups-close-commands=.  The mode removes the advice when
 it goes off.
 
+Each rule brings its own advice, and the name of that advice holds the
+rule.  =advice-add= takes advice of a name that is there already off
+the command first, so one name for each kind let a second rule on the
+same command replace the first.
+
+The mode writes a rule into =auto-tab-groups--advised= before the
+advice of that rule goes on, and it reads that record when it goes off:
+the advice comes off the commands it went on, and not off the ones the
+options name by then.  The options may change while the mode is on,
+because the three the setup reads put the advice on again from their
+=:set= function.
+
 An advice stands in for the command.  It therefore returns what the
 command returned.  A caller that uses the answer of the command must
 see the answer of the command, and not the answer of the bookkeeping.
@@ -47,91 +59,39 @@ tab.  The create advice needs it to put the old tab back.
 
 * The project mode
 
-=auto-tab-groups-project-mode= adds =project-switch-project= to the
-create commands and =project-kill-buffers= to the close commands.
+=auto-tab-groups-project-mode= advises the commands that ask for a
+project with the create advice — =project-prompt-project-dir=,
+=project-prompt-project-name= and =project-switch-to-buffer= — and
+=project-kill-buffers= with the close advice.  It does that itself, so
+the options of the package stay empty.
 
 =auto-tab-groups-project-group-name= makes the name.  It takes what
 the command returned and finds the directory of the project:
 
-- a string that names a directory, or a known project root
-- a buffer, and the mode then asks the buffer for its directory
-- nothing, and the mode then uses the current project
+- a string that names a directory, or the root of a known project
+- a buffer, and the name comes from the directory of that buffer
+- anything else, and there is no directory, no name and no group
 
 The mode uses =project-known-project-roots= for a name that is not a
-directory.  A command can return the name of a project rather than
-its root.
+directory, because =project-prompt-project-name= returns the name of a
+project and not its root.
 
-* The eyecandy mode
+Two commands need more than the name.
 
-=auto-tab-groups-eyecandy-mode= replaces four things in the tab bar:
-the format, the format function for a tab, the format function for a
-group, and the button for a new tab.  It puts the old values back
-when it goes off.
+=project-kill-buffers= kills the buffers of the project, and the
+directory is gone with them.  The advice of this package therefore
+asks =project-current= for the root before the command runs and answers
+with the root afterwards, and only where a buffer really died: the
+command answers with the string of its own message where it finds none
+to kill, and the group went although nothing had.  The advice asks
+without a prompt, because a prompt here would go through the advised
+=project-prompt-project-dir= and open a group for the answer to a
+question the command then asks again.
 
-Two names changed in version 0.4:
-=auto-tab-groups-eyecandy-group-name-function= and
-=auto-tab-groups-eyecandy-format-new-button=.  Both are user facing,
-so the old names are aliases.
-
-** The separator
-
-=auto-tab-groups-eyecandy--get-bar-image= makes the bar between the
-groups.  On a graphic display it is a PBM image of one color.  In a
-terminal it is the character =|= with the same color as foreground
-and background.  The idea comes from doom-modeline.
-
-** The icons
-
-=auto-tab-groups-eyecandy--get-group-icon= takes the first entry of
-=auto-tab-groups-eyecandy-icons= whose regular expression matches the
-name of the group.  A string stands for itself.  A plist names an
-icon of nerd-icons.
-
-nerd-icons answers with the glyph, and it does this whether or not
-the frame has the font.  A nerd font glyph without the font is a hex
-box in the tab bar.  The package therefore asks the frame:
-
-- On a graphic display it asks the font with =internal-char-font=.
-  =char-displayable-p= answers for the character set, and not for the
-  font.
-- In a terminal it asks =char-displayable-p=.
-
-The package uses a plain character where the frame has no glyph.
-
-** The spacers
-
-=auto-tab-groups-eyecandy--spacer= makes a space of a part of the
-normal width, and =--thin-spacer= and =--wide-spacer= name the two
-that the default format uses.  It does this with the =space-width= display
-property, and only on a graphic display.  A terminal draws no part of
-a cell, and a plain space says the same there.
-
-** The menu button
-
-=auto-tab-groups-eyecandy--tab-bar-format= answers with the option in
-a graphic frame, and without =tab-bar-format-menu-bar= in a terminal.
-
-A terminal paints the row of the bar in the redisplay that turns the
-bar on, and it leaves the row alone after that.  With the menu button
-in the format, a tab that changes before that redisplay leaves the row
-blank for the rest of the session.  Neither =force-mode-line-update=
-nor =redraw-display= brings it back, and the row still shows what
-stood in it before.
-
-Stock Emacs does the same, and its own default format has no menu
-button:
-
-#+begin_src emacs-lisp
-  ;; emacs -nw -Q, and the row of the bar stays blank
-  (menu-bar-mode -1)
-  (setq tab-bar-format '(tab-bar-format-tabs tab-bar-format-menu-bar))
-  (tab-bar-mode 1)
-  (tab-bar-new-tab)
-#+end_src
-
-A =(redisplay t)= between the two last lines paints the row, and so
-does a format without the menu button.  Measured with Emacs 30.2, in
-tmux 3.7 and under pyte.
+=project-forget-project= names a project to forget, not one to enter.
+It prompts with =project-prompter=, which the create advice sits on, so
+the name function answers nil for the commands in
+=auto-tab-groups-project-asking-commands=.
 
 * The tests
 
@@ -143,10 +103,15 @@ stub in the place of the switch function, and it tests:
 - the name function, with and without =:ignore-result=
 - the return value of both advice functions
 - the buffer that the create advice carries into the new group
-- the name of a project group, for each form of the result
-- the icon of a group, with and without a font
-- the spacer, on a graphic display and in a terminal
-- the format of the bar, with the menu button and without it
+- the group made for a command that then quits
+- the advice: that it comes off the commands again, and that two rules
+  on one command are two pieces of advice
+- a rule added while the mode is on, and a rule that signals half way
+  through the setup
+- the name of a project group, for each form of the result, and none
+  for a command that only asks
+- the close of a group: an ungrouped tab, the sole tab of a frame, and
+  the buffers that =project-kill-buffers= killed
 
 A batch session has a frame and tabs, so the tab bookkeeping is
 testable without a display.
