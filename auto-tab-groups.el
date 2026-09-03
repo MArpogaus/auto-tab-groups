@@ -240,11 +240,15 @@ belongs to."
          (name (funcall name-function results))
          ;; A command that only prompts shows no buffer and the new tab
          ;; stays as it is.  Switching to the buffer that was current
-         ;; already changes nothing to compare, so a returned buffer is
-         ;; the only sign of one being shown.
+         ;; already changes nothing to compare, so a returned buffer,
+         ;; another current buffer, or a window layout that is not the
+         ;; one from before are the three signs of a buffer shown: a
+         ;; command that ends in `display-buffer' gives only the last.
          (carry (and name
                      (or (buffer-live-p results)
-                         (not (eq shown buffer)))
+                         (not (eq shown buffer))
+                         (not (window-configuration-equal-p
+                               windows (current-window-configuration))))
                      (not (equal name (auto-tab-groups--current-group))))))
     (when carry (set-window-configuration windows))
     (auto-tab-groups--switch-or-create-tab-group name)
