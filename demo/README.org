@@ -1,7 +1,7 @@
-#+TITLE: The recording and the picture
+#+TITLE: The recording
 
-This directory holds the scripts that make the pictures in the
-[[file:../README.org][README]].  Both come from a real Emacs session with the default theme.
+This directory holds the script that makes the recording in the
+[[file:../README.org][README]].  It comes from a real Emacs session.
 
 * The recording
 
@@ -27,32 +27,7 @@ Make the animation from the frames:
 Do not resample the frame rate afterwards.  Dropping frames makes the
 motion uneven.
 
-* The pictures of the tab bar
+The look of the bar in the recording is
+[[https://github.com/MArpogaus/modern-tab-bars][modern-tab-bars]], which =demo.el= configures.  The pictures of that
+bar belong to its own repository.
 
-=img/tab-bar-plain.png= shows the tab bar as Emacs draws it.
-=img/tab-bar.png= shows the same four groups with the eyecandy mode
-on.  Both come from one session and have the same size, so the README
-shows them one under the other without a jump.
-
-=shots.el= builds the session and exports the two frames, and
-=shots.py= cuts the tab bar out of each:
-
-#+begin_src shell
-  DISPLAY=:99 emacs -Q -l shots.el
-  python3 shots.py ../img
-#+end_src
-
-The script runs the configuration example of the README, so the
-picture shows what that example gives you.  It uses the modus
-operandi theme for the styled picture and the default theme for the
-plain one.
-
-The script needs two things:
-
-- [[https://github.com/rainstormstudio/nerd-icons.el][nerd-icons]] on the load path.  Add it with =-L= where your Emacs
-  does not have it already.
-- A nerd font on the system.  The example uses icons from the =md=
-  style, which the symbols only font does not carry; a patched font
-  such as FiraCode Nerd Font has them.  Without the font the package
-  falls back to a plain character, which is right in a session and
-  poor in a picture.

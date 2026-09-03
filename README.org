@@ -34,9 +34,8 @@ commands, and it creates a tab group when you call one of them.  It
 closes a tab group when you call a command from a second list.
 
 The package is a thin layer on the tab bar of Emacs.  =tab-bar.el=
-does the work, and the [[https://www.gnu.org/software/emacs/manual/html_node/emacs/Tab-Bars.html][manual]] describes its commands.  An optional
-mode styles the tab bar.  The package leaves the other tab bar
-settings to you.
+does the work, and the [[https://www.gnu.org/software/emacs/manual/html_node/emacs/Tab-Bars.html][manual]] describes its commands.  The package
+leaves the tab bar settings, and the look of the bar, to you.
 
 The recording below shows the example configuration in this file at
 work.  Each project gets a tab group of its own.  A command can open
@@ -177,7 +176,8 @@ stays small on purpose.
 | =auto-tab-groups-create-commands=    | alist    | the commands that make a group or switch to one |
 | =auto-tab-groups-close-commands=     | alist    | the commands that close a group                 |
 | =auto-tab-groups-new-choice=         | multiple | what happens when a new tab appears             |
-| =auto-tab-groups-initial-group-name= | string   | the name of the first group                     |
+| =auto-tab-groups-initial-group-name= | string   | the name of a group for a frame that has none   |
+
 | =auto-tab-groups-before-create-hook= | hook     | runs before the package makes a group           |
 | =auto-tab-groups-after-create-hook=  | hook     | runs after the package makes a group            |
 | =auto-tab-groups-before-delete-hook= | hook     | runs before the package deletes a group         |
@@ -185,6 +185,10 @@ stays small on purpose.
 
 =auto-tab-groups-echo-mode= prints a message in the echo area for
 each group that the package makes, switches to or closes.
+
+Each option takes effect at once: a rule you add or change with
+=customize= or =setopt= while the mode is on needs no toggle of the
+mode.
 
 Each entry of =auto-tab-groups-create-commands= and
 =auto-tab-groups-close-commands= has two parts:
