@@ -315,22 +315,29 @@ KIND is either the symbol `create' or the symbol `close'."
   (dolist (command (auto-tab-groups--commands command-data))
     (advice-remove command (auto-tab-groups--advice-name kind))))
 
+(defvar auto-tab-groups--advised nil
+  "What the advice went on, as a list of (KIND . COMMAND-DATA).
+The two options may change while the mode is on, and the advice has to
+come off the commands it went on rather than off the ones the options
+name by the time the mode goes off.")
+
 (defun auto-tab-groups--setup ()
   "Setup advice for commands specified in the configuration."
   (dolist (command-data auto-tab-groups-create-commands)
-    (auto-tab-groups--advice-add 'create command-data))
+    (auto-tab-groups--advice-add 'create command-data)
+    (push (cons 'create command-data) auto-tab-groups--advised))
   (dolist (command-data auto-tab-groups-close-commands)
-    (auto-tab-groups--advice-add 'close command-data))
+    (auto-tab-groups--advice-add 'close command-data)
+    (push (cons 'close command-data) auto-tab-groups--advised))
   (when auto-tab-groups-initial-group-name
     (auto-tab-groups--after-make-frame-function)
     (add-hook 'after-make-frame-functions #'auto-tab-groups--after-make-frame-function)))
 
 (defun auto-tab-groups--teardown ()
-  "Remove advice from commands specified in the configuration."
-  (dolist (command-data auto-tab-groups-create-commands)
-    (auto-tab-groups--advice-remove 'create command-data))
-  (dolist (command-data auto-tab-groups-close-commands)
-    (auto-tab-groups--advice-remove 'close command-data))
+  "Remove the advice from the commands it was added to."
+  (pcase-dolist (`(,kind . ,command-data) auto-tab-groups--advised)
+    (auto-tab-groups--advice-remove kind command-data))
+  (setq auto-tab-groups--advised nil)
   (remove-hook 'after-make-frame-functions #'auto-tab-groups--after-make-frame-function))
 
 ;;;###autoload
