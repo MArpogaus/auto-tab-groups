@@ -134,10 +134,12 @@ Refer to `tab-bar-new-tab-choice' for details."
   :global t
   :group 'auto-tab-groups)
 
-(defun auto-tab-groups--find-tab-by-group-name (tab-group-name)
-  "Return the first tab with the group name TAB-GROUP-NAME."
+(defun auto-tab-groups--find-tab-by-group-name (tab-group-name &optional tabs)
+  "Return the first of TABS with the group name TAB-GROUP-NAME.
+TABS is what `tab-bar-tabs-function' answers, where a caller that has
+the list already does not pass its own."
   (seq-find (lambda (tab) (equal tab-group-name (alist-get 'group tab)))
-            (funcall tab-bar-tabs-function)))
+            (or tabs (funcall tab-bar-tabs-function))))
 
 (defun auto-tab-groups--get-group-spec (command-data)
   "Return the group specification of COMMAND-DATA as a plist.
@@ -177,10 +179,8 @@ it, and `1+' of nil is an error rather than a missing tab."
   "Switch to or create a tab group with the name TAB-GROUP-NAME."
   (when tab-group-name
     (let ((tabs (funcall tab-bar-tabs-function)))
-      (if-let* ((existing-tab (seq-find (lambda (tab)
-                                          (equal tab-group-name
-                                                 (alist-get 'group tab)))
-                                        tabs)))
+      (if-let* ((existing-tab (auto-tab-groups--find-tab-by-group-name
+                               tab-group-name tabs)))
           (auto-tab-groups--switch-tab-group existing-tab tabs)
         (auto-tab-groups-new-group tab-group-name)))))
 
