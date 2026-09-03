@@ -194,15 +194,19 @@ every one of them, and `tab-bar-close-group-tabs' then deleted the lot.
 Measured with one grouped and two ungrouped tabs, both ungrouped ones
 went.  A close command whose name function answers nil reaches this.
 
-A group that holds every tab of the frame: `tab-bar-close-group-tabs'
-ends on the last tab, and `tab-bar-close-tab' refuses that one with
-\"Attempt to delete the sole tab in a frame\" — which came out of the
-command the reader had just run."
-  (when (and tab-group-name
-             (auto-tab-groups--find-tab-by-group-name tab-group-name)
-             (seq-some (lambda (tab)
-                         (not (equal tab-group-name (alist-get 'group tab))))
-                       (funcall tab-bar-tabs-function)))
+A group that holds every tab of the frame, where the reader has no
+`tab-bar-close-last-tab-choice': `tab-bar-close-group-tabs' ends on the
+last tab, and `tab-bar-close-tab' refuses that one with \"Attempt to
+delete the sole tab in a frame\" — which came out of the command the
+reader had just run.  With a choice set, that last tab is theirs to
+close and `tab-bar-close-tab' does as they asked."
+  (when-let* ((tabs (and tab-group-name (funcall tab-bar-tabs-function)))
+              ((auto-tab-groups--find-tab-by-group-name tab-group-name tabs))
+              ((or tab-bar-close-last-tab-choice
+                   (seq-some (lambda (tab)
+                               (not (equal tab-group-name
+                                           (alist-get 'group tab))))
+                             tabs))))
     (run-hooks 'auto-tab-groups-before-delete-hook)
     (tab-bar-close-group-tabs tab-group-name)
     (when auto-tab-groups-echo-mode
