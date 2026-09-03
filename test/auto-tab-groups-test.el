@@ -270,6 +270,76 @@ the project one came from."
           (should-not (auto-tab-groups-project-group-name "no such project")))
       (delete-directory dir t))))
 
+(ert-deftest auto-tab-groups-test-the-sole-tab-goes-where-the-reader-said ()
+  "With `tab-bar-close-last-tab-choice' set, the last tab is theirs to close.
+The refusal is there for the default, where `tab-bar-close-tab' would
+signal; a reader who named a choice gets what they asked for."
+  (let ((tab-bar-tabs-function (lambda (&optional _frame)
+                                 '(((group . "only")))))
+        closed)
+    (cl-letf (((symbol-function 'tab-bar-close-group-tabs)
+               (lambda (name) (push name closed))))
+      (let ((tab-bar-close-last-tab-choice nil))
+        (auto-tab-groups--close-tab-group "only")
+        (should-not closed))
+      (let ((tab-bar-close-last-tab-choice 'delete-frame))
+        (auto-tab-groups--close-tab-group "only")
+        (should (equal closed '("only")))))))
+
+(ert-deftest auto-tab-groups-test-a-command-that-quits-leaves-no-group ()
+  "A group made for a command that never ran goes with it.
+Its empty tab would stay, and every later run of the command would
+switch to that tab instead of doing the work."
+  (let (closed made)
+    (cl-letf (((symbol-function 'auto-tab-groups--find-tab-by-group-name)
+               (lambda (_name &optional _tabs) nil))
+              ((symbol-function 'auto-tab-groups--switch-or-create-tab-group)
+               (lambda (name) (push name made)))
+              ((symbol-function 'auto-tab-groups--close-tab-group)
+               (lambda (name) (push name closed))))
+      (should-error (auto-tab-groups--create-before
+                     "group" (lambda (&rest _) (error "No")) nil))
+      (should (equal made '("group")))
+      (should (equal closed '("group")))
+      ;; and a group that was already there is left alone
+      (setq closed nil)
+      (cl-letf (((symbol-function 'auto-tab-groups--find-tab-by-group-name)
+                 (lambda (_name &optional _tabs) 'tab)))
+        (should-error (auto-tab-groups--create-before
+                       "group" (lambda (&rest _) (error "No")) nil)))
+      (should-not closed))))
+
+(ert-deftest auto-tab-groups-test-teardown-follows-the-setup ()
+  "The advice comes off the commands it went on.
+The options may change while the mode is on: the advice on the commands
+they named before must still be removable."
+  (let ((auto-tab-groups-create-commands
+         '((auto-tab-groups-test--command . "group")))
+        (auto-tab-groups-close-commands nil)
+        (auto-tab-groups-initial-group-name nil)
+        (auto-tab-groups--advised nil)
+        (name (auto-tab-groups--advice-name 'create)))
+    (unwind-protect
+        (progn
+          (auto-tab-groups--setup)
+          (should (advice-member-p name 'auto-tab-groups-test--command))
+          ;; the reader changes the option while the mode is on
+          (setq auto-tab-groups-create-commands nil)
+          (auto-tab-groups--teardown)
+          (should-not (advice-member-p name 'auto-tab-groups-test--command)))
+      (advice-remove 'auto-tab-groups-test--command name))))
+
+(ert-deftest auto-tab-groups-test-a-command-that-only-asks-gets-no-group ()
+  "`project-forget-project' names a project to forget, not one to enter.
+It prompts with `project-prompter', which the create advice sits on."
+  (let ((this-command 'project-forget-project))
+    (should-not (auto-tab-groups-project-group-name default-directory)))
+  (let ((this-command 'project-switch-project))
+    (should (equal (auto-tab-groups-project-group-name
+                    (expand-file-name "../auto-tab-groups/"))
+                   (auto-tab-groups-project-group-name
+                    default-directory)))))
+
 (defun auto-tab-groups-test--groups ()
   "Return the group of each tab of this frame, in order."
   (mapcar (lambda (tab) (alist-get 'group tab)) (tab-bar-tabs)))
