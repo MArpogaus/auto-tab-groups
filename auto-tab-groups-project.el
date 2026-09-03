@@ -101,11 +101,22 @@ therefore never closed a group at all."
   (auto-tab-groups--advice-remove 'close auto-tab-groups-project--close-commands))
 
 ;;;###autoload
+(defvar auto-tab-groups-project-asking-commands
+  '(project-forget-project)
+  "Commands that ask for a project without entering it.
+They prompt with `project-prompter', which is
+`project-prompt-project-dir' by default and which the create advice
+sits on, so the answer to their question would otherwise open a group:
+for `project-forget-project' a group for the project it then forgets.")
+
 (defun auto-tab-groups-project-group-name (thing)
   "Return the tab group name for the project THING belongs to.
 THING is what the command returned: a directory, a buffer, or the
-name of a known project."
-  (when-let* ((dir (auto-tab-groups-project--directory thing))
+name of a known project.  Nil for the commands of
+`auto-tab-groups-project-asking-commands', which only ask."
+  (when-let* (((not (memq this-command
+                          auto-tab-groups-project-asking-commands)))
+              (dir (auto-tab-groups-project--directory thing))
               ;; one `project-current' for the name and the letter both:
               ;; measured, that call is 24.7 of the 221 microseconds this
               ;; function cost, and it ran twice
