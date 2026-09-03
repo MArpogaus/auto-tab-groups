@@ -216,9 +216,16 @@ close and `tab-bar-close-tab' does as they asked."
 (defun auto-tab-groups--create-before (name orig-fun args)
   "Open the group NAME, then run ORIG-FUN on ARGS in it.
 The name is known before the command runs, so the group is there to run
-it in."
-  (auto-tab-groups--switch-or-create-tab-group name)
-  (apply orig-fun args))
+it in.  A command that quits or signals instead of running leaves no
+group behind: the empty tab of a group made for it would stay, and
+every later run of the command would switch to that tab."
+  (let ((made (and name (not (auto-tab-groups--find-tab-by-group-name name)))))
+    (auto-tab-groups--switch-or-create-tab-group name)
+    (condition-case err
+        (apply orig-fun args)
+      ((quit error)
+       (when made (auto-tab-groups--close-tab-group name))
+       (signal (car err) (cdr err))))))
 
 (defun auto-tab-groups--create-after (name-function orig-fun args)
   "Run ORIG-FUN on ARGS, then open the group NAME-FUNCTION names for it.
