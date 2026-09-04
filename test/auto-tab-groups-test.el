@@ -54,16 +54,16 @@
   (should (equal (auto-tab-groups--get-group-spec '(cmd . ignore))
                  '(:tab-group-name ignore)))
   (should (equal (plist-get (auto-tab-groups--get-group-spec
-                             '(cmd "group" :ignore-result t))
+                             '(cmd "group" :before-command t))
                             :tab-group-name)
                  "group"))
   (should (plist-get (auto-tab-groups--get-group-spec
-                      '(cmd "group" :ignore-result t))
-                     :ignore-result))
+                      '(cmd "group" :before-command t))
+                     :before-command))
   ;; the plist form from the docstring examples
   (should (equal (auto-tab-groups--get-group-spec
-                  '(cmd :tab-group-name "group" :ignore-result t))
-                 '(:tab-group-name "group" :ignore-result t)))
+                  '(cmd :tab-group-name "group" :before-command t))
+                 '(:tab-group-name "group" :before-command t)))
   ;; a lambda is a spec, and in interpreted code also a list
   (let ((spec (auto-tab-groups--get-group-spec
                (cons 'cmd (lambda () "dyn")))))
@@ -71,12 +71,12 @@
 
 (ert-deftest auto-tab-groups-test-group-spec-copies ()
   "Normalizing never modifies the user's customization data."
-  (let ((user (list "group" :ignore-result t)))
+  (let ((user (list "group" :before-command t)))
     (auto-tab-groups--get-group-spec (cons 'cmd user))
-    (should (equal user '("group" :ignore-result t))))
+    (should (equal user '("group" :before-command t))))
   (let ((user (list :tab-group-name "group")))
     (plist-put (auto-tab-groups--get-group-spec (cons 'cmd user))
-               :ignore-result t)
+               :before-command t)
     (should (equal user '(:tab-group-name "group")))))
 
 (ert-deftest auto-tab-groups-test-commands ()
@@ -132,12 +132,12 @@ the group of the second was ever made."
       (should (eq (funcall advice #'auto-tab-groups-test--command) 'result))
       (should (equal auto-tab-groups-test--switched "result")))))
 
-(ert-deftest auto-tab-groups-test-create-advice-ignore-result ()
-  "With :ignore-result the group is created before the command runs."
+(ert-deftest auto-tab-groups-test-create-advice-before-command ()
+  "With :before-command the group is created before the command runs."
   (auto-tab-groups-test--with-stub
     (let ((advice (auto-tab-groups--get-create-advice
                    (list :tab-group-name (lambda (&rest _) "early")
-                         :ignore-result t))))
+                         :before-command t))))
       (should (eq (funcall advice #'auto-tab-groups-test--command) 'result))
       (should (equal auto-tab-groups-test--switched "early")))))
 

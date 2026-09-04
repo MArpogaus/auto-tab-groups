@@ -29,7 +29,7 @@
         auto-tab-groups-create-commands
         '(((customize-group) . "customize"))
         auto-tab-groups-close-commands
-        '((Custom-buffer-done "customize" :ignore-result t))
+        '((Custom-buffer-done "customize" :always-close t))
         project-switch-commands #'project-find-file)
   (auto-tab-groups-project-mode 1)
   (modern-tab-bar-mode 1)

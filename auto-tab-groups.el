@@ -61,21 +61,21 @@ Each element should be a cons cell:
   - A string: Name of the tab group.
   - A function: Called to determine the group name.  Its result should be a
                 string.  The command runs first and its result is passed to
-                the function, unless `:ignore-result' is non-nil: then the
+                the function, unless `:before-command' is non-nil: then the
                 group is created before the command runs and the function is
                 called with no argument.
   - A plist: Provides additional options.  Currently supported properties:
     - `:tab-group-name': Group name (string) or a function returning a string.
-    - `:ignore-result':  If non-nil, the tab group is created before the
+    - `:before-command': If non-nil, the tab group is created before the
                          command runs, and a name function is called with no
                          argument.  If nil, the command runs first and its
                          result is passed to a name function.
 
 Example:
 
- ((my-open-command1 \"my-group\" :ignore-result t)
+ ((my-open-command1 \"my-group\" :before-command t)
   ((my-open-command2 my-open-command3) :tab-group-name \"my-group2\"
-                                       :ignore-result t)
+                                       :before-command t)
   ((my-open-command4 my-open-command5) :tab-group-name \"my-group3\"))
 
 See `auto-tab-groups-project-group-name' for a group name that follows
@@ -96,14 +96,14 @@ Each element should be a cons cell:
                 string.
   - A plist: Provides additional options.  Currently supported properties:
     - `:tab-group-name': Group name (string) or a function returning a string.
-    - `:ignore-result':  If non-nil, the tab group will be closed regardless of
+    - `:always-close':   If non-nil, the tab group will be closed regardless of
                          the command's result.  If nil, the group is only closed
                          if the command returns non-nil.
 
 Example:
 
- ((my-close-command1 :tab-group-name \"my-group2\" :ignore-result t)
-  (my-close-command2 \"my-group3\" :ignore-result t))
+ ((my-close-command1 :tab-group-name \"my-group2\" :always-close t)
+  (my-close-command2 \"my-group3\" :always-close t))
 
 See `auto-tab-groups-project-group-name' for a group name that follows
 the current project."
@@ -163,9 +163,11 @@ the list already does not pass its own."
 (defun auto-tab-groups--get-group-spec (command-data)
   "Return the group specification of COMMAND-DATA as a plist.
 
-The returned plist contains:
-`:tab-group-name' - The group name (string or function).
-`:ignore-result' - Whether to ignore the command's result (boolean).
+The returned plist carries `:tab-group-name', the group name as a
+string or a function, and whichever flag the rule named:
+`:before-command' in a create rule, `:always-close' in a close one.
+Each is read where it is used, and neither means anything to the other
+kind of rule.
 
 The result is a fresh list: the input belongs to the user's
 customization and may not be modified."
@@ -177,7 +179,7 @@ customization and may not be modified."
      ;; already a plist, `(command :tab-group-name "name" ...)'
      ((keywordp (car spec))
       (copy-sequence spec))
-     ;; name first, `(command "name" :ignore-result t)'
+     ;; name first, `(command "name" :before-command t)'
      (t
       (append (list :tab-group-name (car spec)) (cdr spec))))))
 
@@ -279,7 +281,7 @@ belongs to."
   (lambda (orig-fun &rest args)
     (let* ((name-or-function (plist-get tab-group-spec :tab-group-name))
            (functionp (functionp name-or-function)))
-      (if (or (not functionp) (plist-get tab-group-spec :ignore-result))
+      (if (or (not functionp) (plist-get tab-group-spec :before-command))
           (auto-tab-groups--create-before
            (if functionp (funcall name-or-function) name-or-function)
            orig-fun args)
@@ -293,7 +295,7 @@ belongs to."
       ;; The name is asked for inside the `when': a command that
       ;; answered nil closes nothing, and a name function has no
       ;; business running for an answer nobody reads.
-      (when (or (plist-get tab-group-spec :ignore-result) result)
+      (when (or (plist-get tab-group-spec :always-close) result)
         (auto-tab-groups--close-tab-group
          (if (functionp name) (funcall name result) name)))
       result)))
