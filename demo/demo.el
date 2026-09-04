@@ -8,7 +8,7 @@
 ;; the scripted session.
 ;;
 ;;     Xvfb :99 -screen 0 1280x900x24 &
-;;     DISPLAY=:99 emacs -Q -l demo/demo.el
+;;     DISPLAY=:99 emacs -Q -L path/to/nerd-icons -l demo/demo.el
 ;;
 ;; The frames land in demo/frames/; demo/README.org says how they become
 ;; the GIF.
@@ -19,6 +19,8 @@
 (require 'auto-tab-groups)
 (require 'auto-tab-groups-project)
 (require 'modern-tab-bar)
+;; The icons of the groups: give -Q the directory of nerd-icons with -L.
+(require 'nerd-icons)
 
 ;;;; The configuration of the README
 (setopt auto-tab-groups-create-commands '((customize-group . "customize"))
@@ -27,8 +29,11 @@
 (auto-tab-groups-mode)
 ;; the look of the bar
 (setopt modern-tab-bar-icons '(("HOME"       . (:style "suc" :icon "custom-emacs"))
+                               ("dirvish"    . (:style "suc" :icon "custom-folder_oct"))
+                               ("denote"     . (:style "md"  :icon "notebook_edit"))
                                ("customize"  . (:style "cod" :icon "settings"))
-                               ("^\\[P\\] *" . (:style "oct" :icon "repo")))
+                               ("^\\[P\\] *" . (:style "oct" :icon "repo"))
+                               ("^\\[T\\] *" . (:style "cod" :icon "remote")))
         modern-tab-bar-group-name-function
         (lambda (group-name)
           (if (string-match "^\\[.\\] *" group-name)
@@ -48,10 +53,6 @@
                       '("Source Code Pro" "FiraCode Nerd Font"
                         "DejaVu Sans Mono" "Liberation Mono"))))
   (when font (set-frame-font (format "%s 13" font) nil t)))
-;; No nerd-icons in an -Q session: the icon options fall back to "?",
-;; so the groups carry plain glyphs here.
-(setopt modern-tab-bar-icons '(("HOME" . "⌂") ("customize" . "☰") ("^\\[P\\] *" . "▸"))
-        modern-tab-bar-default-icon "●")
 ;; `project-switch-project' asks which command to run in the project.
 (setq project-switch-commands #'project-find-file)
 

@@ -11,13 +11,14 @@ session and writes one frame each tenth of a second with
 
 #+begin_src shell
   Xvfb :99 -screen 0 1280x900x24 &        # if there is no display
-  DISPLAY=:99 emacs -Q -l demo/demo.el    # writes demo/frames/f0001.png ...
+  DISPLAY=:99 emacs -Q -L path/to/nerd-icons -l demo/demo.el   # frames into demo/frames/
 #+end_src
 
 The configuration in the recording is the minimal configuration of the
 README -- a group per project, and the mode -- with one rule for
-customize buffers and modern-tab-bar for the look, under the
-modus-operandi theme.  =demo.el= says so at its top; the rest of the
+customize buffers and modern-tab-bar for the look, with the icons of
+the complete configuration from nerd-icons, under the modus-operandi
+theme.  A Nerd Font has to be installed for the icons to draw.  =demo.el= says so at its top; the rest of the
 file is the frame, the font and the steps of the session.
 
 Make the animation from the frames.  The final view is held for a
