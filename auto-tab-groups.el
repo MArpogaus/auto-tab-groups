@@ -4,7 +4,7 @@
 
 ;; Author: Marcel Arpogaus <znepry.necbtnhf@tznvy.pbz>
 ;; Assisted-by: Claude:claude-opus-5
-;; Version: 0.5
+;; Version: 1.0rc1
 ;; Package-Requires: ((emacs "29.1"))
 ;; Keywords: convenience, tabs
 ;; URL: https://github.com/MArpogaus/auto-tab-groups
@@ -288,14 +288,14 @@ belongs to."
 (defun auto-tab-groups--get-close-advice (tab-group-spec)
   "Get advice function to handle tab group closing based on TAB-GROUP-SPEC."
   (lambda (orig-fun &rest args)
-    (let* ((result (apply orig-fun args))
-           (tab-group-name-or-func (plist-get tab-group-spec :tab-group-name))
-           (ignore-result (plist-get tab-group-spec :ignore-result))
-           (tab-group-name (if (functionp tab-group-name-or-func)
-                               (funcall tab-group-name-or-func result)
-                             tab-group-name-or-func)))
-      (when (or ignore-result result)
-        (auto-tab-groups--close-tab-group tab-group-name))
+    (let ((result (apply orig-fun args))
+          (name (plist-get tab-group-spec :tab-group-name)))
+      ;; The name is asked for inside the `when': a command that
+      ;; answered nil closes nothing, and a name function has no
+      ;; business running for an answer nobody reads.
+      (when (or (plist-get tab-group-spec :ignore-result) result)
+        (auto-tab-groups--close-tab-group
+         (if (functionp name) (funcall name result) name)))
       result)))
 
 (defun auto-tab-groups--after-make-frame-function (&optional frame)
@@ -304,7 +304,8 @@ belongs to."
     ;; `select-frame' without a restore leaves the wrong frame selected
     ;; for whoever made one it did not mean to show.
     (with-selected-frame (or frame (selected-frame))
-      (tab-group (or tab-group-name auto-tab-groups-initial-group-name)))))
+      (tab-bar-change-tab-group
+       (or tab-group-name auto-tab-groups-initial-group-name)))))
 
 (defun auto-tab-groups--commands (command-data)
   "Return the list of commands named by COMMAND-DATA."

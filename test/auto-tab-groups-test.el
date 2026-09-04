@@ -435,5 +435,48 @@ which came out of the command the reader had just run."
   (should-not (auto-tab-groups--close-tab-group "only"))
   (should (equal (auto-tab-groups-test--groups) '("only"))))
 
+(ert-deftest auto-tab-groups-test-a-new-frame-gets-the-initial-group ()
+  "A frame whose tab carries no group gets the name the reader chose.
+`auto-tab-groups-initial-group-name\' is what a frame with no group of
+its own is given; a frame made from a grouped one keeps that group."
+  (let ((auto-tab-groups-initial-group-name "HOME")
+        (was (alist-get 'group (tab-bar--current-tab))))
+    (unwind-protect
+        (progn
+          (tab-bar-change-tab-group nil)
+          (auto-tab-groups--after-make-frame-function)
+          (should (equal (alist-get 'group (tab-bar--current-tab)) "HOME"))
+          ;; and a group already there is the one it keeps
+          (tab-bar-change-tab-group "mine")
+          (auto-tab-groups--after-make-frame-function)
+          (should (equal (alist-get 'group (tab-bar--current-tab)) "mine")))
+      (tab-bar-change-tab-group was))))
+
+(ert-deftest auto-tab-groups-test-new-group-forgets-the-old-buffers ()
+  "A group opened on a buffer of its own starts with no buffer history.
+A new tab keeps the window of the tab it was made from, and a window
+keeps the buffers it showed: without this the new group walked back into
+the buffers of the old one with `previous-buffer\'."
+  (let* ((auto-tab-groups-new-choice "*scratch*")
+         (tab-bar-tab-post-open-functions nil)
+         (before (length (funcall tab-bar-tabs-function)))
+         ;; a buffer that outlives the call: `window-prev-buffers'
+         ;; drops an entry whose buffer has died, so a temporary one
+         ;; would leave nothing to clear
+         (old (get-buffer-create "*auto-tab-groups-test-old*")))
+    ;; an entry is (BUFFER START POINT), and the two positions are
+    ;; markers: `set-window-prev-buffers' refuses anything else.
+    (set-window-prev-buffers
+     nil (list (list old (copy-marker 1) (copy-marker 1))))
+    (should (window-prev-buffers))
+    (unwind-protect
+        (progn
+          (auto-tab-groups-new-group "fresh")
+          (should (equal (alist-get 'group (tab-bar--current-tab)) "fresh"))
+          (should-not (window-prev-buffers)))
+      (when (> (length (funcall tab-bar-tabs-function)) before)
+        (tab-bar-close-tab))
+      (kill-buffer old))))
+
 (provide 'auto-tab-groups-test)
 ;;; auto-tab-groups-test.el ends here

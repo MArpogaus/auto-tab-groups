@@ -45,7 +45,10 @@ The advice has two roads.  =:ignore-result= chooses the road:
 
 The advice runs the command and closes the group after it.  It closes
 the group if the command returns a value, or in each case with
-=:ignore-result=.
+=:ignore-result=.  The name function is asked for the name inside that
+condition: a command that answered nil closes nothing, and a name
+function of the reader's has no business running for an answer nobody
+reads.
 
 * How the package finds a group
 

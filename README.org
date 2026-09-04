@@ -87,7 +87,7 @@ Each project gets a tab group:
 
 The look in the picture above is [[https://github.com/MArpogaus/modern-tabs][modern-tabs]], which dresses the tab
 bar and the tab line and knows nothing about tab groups being made
-automatically.  It used to live here, as =auto-tab-groups-eyecandy=.
+automatically.
 
 Switch to a project with =C-x p p=, and its tab group appears.  Kill
 the buffers of the project with =C-x p k=, and the group closes.
