@@ -193,7 +193,9 @@ it, and `1+' of nil is an error rather than a missing tab."
     (message "Switched to tab group: %s" (alist-get 'group tab))))
 
 (defun auto-tab-groups--current-group ()
-  "Return the group name of the current tab, or nil."
+  "Return the group name of the current tab, or nil.
+`tab-bar--current-tab-find' is private to tab-bar, and the only way to
+the current tab's alist: `tab-bar-tabs' answers with the list of them."
   (alist-get 'group (tab-bar--current-tab-find)))
 
 (defun auto-tab-groups--switch-or-create-tab-group (tab-group-name)
@@ -302,6 +304,8 @@ belongs to."
 
 (defun auto-tab-groups--after-make-frame-function (&optional frame)
   "Initialize new group or clone existing one when new FRAME is created."
+  ;; `tab-bar--current-tab' is private to tab-bar; see
+  ;; `auto-tab-groups--current-group'.
   (let ((tab-group-name (funcall tab-bar-tab-group-function (tab-bar--current-tab))))
     ;; `select-frame' without a restore leaves the wrong frame selected
     ;; for whoever made one it did not mean to show.
@@ -412,7 +416,7 @@ then keep their advice for the rest of the session."
     ;; own: any other choice leaves the window where it was, and its
     ;; history is the history of that window.
     (when (stringp tab-bar-new-tab-choice)
-      (set-window-prev-buffers (get-buffer-window) nil)))
+      (set-window-prev-buffers (selected-window) nil)))
   (tab-bar-change-tab-group tab-group-name)
   (when auto-tab-groups-echo-mode
     (message "Created new tab group: %s" tab-group-name))
