@@ -10,16 +10,26 @@ session and writes one frame each tenth of a second with
 =x-export-frames=.  There is no screen recorder.
 
 #+begin_src shell
-  Xvfb :99 -screen 0 1280x900x24 &   # if there is no display
-  DISPLAY=:99 emacs -Q -l demo.el    # writes the frames to /tmp
+  Xvfb :99 -screen 0 1280x900x24 &        # if there is no display
+  DISPLAY=:99 emacs -Q -l demo/demo.el    # writes demo/frames/f0001.png ...
 #+end_src
 
-Make the animation from the frames:
+The configuration in the recording is the minimal configuration of the
+README -- a group per project, and the mode -- with one rule for
+customize buffers and modern-tab-bar for the look, under the
+modus-operandi theme.  =demo.el= says so at its top; the rest of the
+file is the frame, the font and the steps of the session.
+
+Make the animation from the frames.  The final view is held for a
+while, so the loop does not restart with a jump.
 
 #+begin_src shell
+  cd demo
   ffmpeg -framerate 13 -start_number 1 -i frames/f%04d.png \
-      -filter_complex "[0:v]scale=820:-1:flags=lanczos,split[a][b];\
-                       [a]palettegen=max_colors=128[p];[b][p]paletteuse" \
+      -filter_complex "[0:v]tpad=stop_mode=clone:stop_duration=2.5,\
+                       scale=820:-1:flags=lanczos,split[a][b];\
+                       [a]palettegen=max_colors=128[p];\
+                       [b][p]paletteuse=dither=bayer:bayer_scale=3" \
       -loop 0 raw.gif
   gifsicle -O3 --lossy=80 raw.gif -o ../img/demo.gif
 #+end_src
