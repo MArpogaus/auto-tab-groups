@@ -31,7 +31,6 @@
 (require 'cl-lib)
 (require 'auto-tab-groups)
 (require 'auto-tab-groups-project)
-(require 'auto-tab-groups-eyecandy)
 
 (defvar auto-tab-groups-test--switched nil
   "Group name the stubbed switch function received.")
@@ -89,8 +88,8 @@
   "Advice is removed again.
 Each call to the advice constructor returns a fresh closure, so the
 advice carries a name; without it the advice would stay behind."
-  (let ((data '(auto-tab-groups-test--command . "group"))
-        (name (auto-tab-groups--advice-name 'create)))
+  (let* ((data '(auto-tab-groups-test--command . "group"))
+         (name (auto-tab-groups--advice-name 'create data)))
     (unwind-protect
         (progn
           (auto-tab-groups--advice-add 'create data)
@@ -98,6 +97,25 @@ advice carries a name; without it the advice would stay behind."
           (auto-tab-groups--advice-remove 'create data)
           (should-not (advice-member-p name 'auto-tab-groups-test--command)))
       (advice-remove 'auto-tab-groups-test--command name))))
+
+(ert-deftest auto-tab-groups-test-two-rules-on-one-command ()
+  "Two rules that name one command are two pieces of advice.
+The name of a piece of advice held the kind of the rule and nothing
+else, and `advice-add' takes advice of a name that is there already
+off the command first: the second rule replaced the first, and only
+the group of the second was ever made."
+  (let* ((first '(auto-tab-groups-test--command . "one"))
+         (second '(auto-tab-groups-test--command . "two"))
+         (names (list (auto-tab-groups--advice-name 'create first)
+                      (auto-tab-groups--advice-name 'create second))))
+    (unwind-protect
+        (progn
+          (auto-tab-groups--advice-add 'create first)
+          (auto-tab-groups--advice-add 'create second)
+          (dolist (name names)
+            (should (advice-member-p name 'auto-tab-groups-test--command))))
+      (dolist (name names)
+        (advice-remove 'auto-tab-groups-test--command name)))))
 
 (ert-deftest auto-tab-groups-test-create-advice-static-name ()
   "A static group name is created before the command runs."
@@ -192,8 +210,8 @@ carry is skipped."
 (ert-deftest auto-tab-groups-test-close-advice-answers-as-the-command-did ()
   "The close advice returns what the command returned.
 It stands in for the command everywhere, so a caller that uses the
-answer — `project-kill-buffers\=' among the commands people close on —
-must get the command\='s and not the bookkeeping\='s."
+answer — `project-kill-buffers' among the commands people close on —
+must get the command's and not the bookkeeping's."
   (let (closed)
     (cl-letf (((symbol-function 'auto-tab-groups--close-tab-group)
                (lambda (name) (setq closed name) nil)))
@@ -201,41 +219,6 @@ must get the command\='s and not the bookkeeping\='s."
                      '(:tab-group-name "group"))))
         (should (eq (funcall advice #'auto-tab-groups-test--command) 'result))
         (should (equal closed "group"))))))
-
-(ert-deftest auto-tab-groups-test-icon-falls-back-without-the-font ()
-  "A glyph the frame cannot draw comes back as a plain character.
-nerd-icons answers with the glyph whether or not the font is there,
-and without it the tab bar shows a hex box."
-  (cl-letf (((symbol-function 'nerd-icons-mdicon) (lambda (&rest _) "")))
-    (cl-letf (((symbol-function 'auto-tab-groups-eyecandy--displayable-p)
-               (lambda (&rest _) t)))
-      (should (equal (auto-tab-groups-eyecandy--icon
-                      '(:style "md" :icon "flash"))
-                     "")))
-    (cl-letf (((symbol-function 'auto-tab-groups-eyecandy--displayable-p)
-               #'ignore))
-      (should (equal (auto-tab-groups-eyecandy--icon
-                      '(:style "md" :icon "flash"))
-                     "?"))))
-  ;; a plain string icon is nobody's font problem
-  (should (equal (auto-tab-groups-eyecandy--icon "x") "x")))
-
-(ert-deftest auto-tab-groups-test-spacer-is-plain-in-a-terminal ()
-  "The tab bar spacer carries no `space-width\=' in a terminal.
-One such item anywhere in the format leaves the whole bar row
-unpainted there, so the row keeps whatever stood in it before."
-  (cl-letf (((symbol-function 'display-graphic-p) (lambda (&rest _) t)))
-    (should (equal (get-text-property
-                    0 'display (auto-tab-groups-eyecandy--wide-spacer))
-                   '(space-width 0.75))))
-  (cl-letf (((symbol-function 'display-graphic-p) #'ignore))
-    (let ((item (auto-tab-groups-eyecandy--wide-spacer)))
-      (should (equal item " "))
-      (should-not (get-text-property 0 'display item))))
-  ;; the format holds the names of the two spacers, so a value from
-  ;; customize can round trip
-  (should (memq 'auto-tab-groups-eyecandy--wide-spacer
-                auto-tab-groups-eyecandy-tab-bar-format)))
 
 (ert-deftest auto-tab-groups-test-find-tab-by-group-name ()
   "Tabs are found by their group name."
@@ -247,6 +230,36 @@ unpainted there, so the row keeps whatever stood in it before."
     (should (equal (alist-get 'name (auto-tab-groups--find-tab-by-group-name "two"))
                    "b"))
     (should-not (auto-tab-groups--find-tab-by-group-name "three"))))
+
+(ert-deftest auto-tab-groups-test-project-close-asks-nothing-and-counts-the-dead ()
+  "The close advice prompts for no project, and reads the buffer list.
+`project-kill-buffers' asks with a prompt of its own, and a prompt in
+the advice came first — through the advised `project-prompt-project-dir',
+which creates a group for the answer to a question the command then asks
+again.  And where the command finds no buffer to kill it returns the
+string of its own message, which is not nil, so the group went although
+nothing had.
+
+The buffer list is what answers, not the project.  An earlier attempt
+asked whether the project had buffers left, mocked that away here, and
+shipped: `project-kill-buffer-conditions' keeps every buffer it does not
+name, and `project-buffers' counts `*scratch*' and the minibuffer for a
+project holding the directory Emacs started in, so no group ever closed."
+  (let (prompted)
+    (cl-letf (((symbol-function 'project-current)
+               (lambda (&optional maybe-prompt &rest _)
+                 (when maybe-prompt (setq prompted t))
+                 '(vc Git "/tmp/project/")))
+              ((symbol-function 'project-root) (lambda (_project) "/tmp/project/")))
+      ;; a command that kills nothing and answers with its own message
+      (should-not (auto-tab-groups-project--project-kill-buffers-advice
+                   (lambda (&rest _) "No buffers to kill")))
+      ;; one that kills a buffer and answers nil: the answer says nothing
+      (let ((doomed (generate-new-buffer "*doomed*")))
+        (should (equal (auto-tab-groups-project--project-kill-buffers-advice
+                        (lambda (&rest _) (kill-buffer doomed) nil))
+                       "/tmp/project/")))
+      (should-not prompted))))
 
 (ert-deftest auto-tab-groups-test-project-group-name ()
   "Without a project there is no group name."
@@ -276,45 +289,151 @@ the project one came from."
           (should-not (auto-tab-groups-project-group-name "no such project")))
       (delete-directory dir t))))
 
-(ert-deftest auto-tab-groups-test-the-old-names-still-answer ()
-  "The names that a configuration may hold still work.
-Both are user facing: one is an option, the other is named in a
-`tab-bar-format\='."
-  (should (eq (indirect-variable
-               'auto-tab-groups-eyecandy-tab-bar-group-name-format-function)
-              'auto-tab-groups-eyecandy-group-name-function))
-  (should (eq (symbol-function 'auto-tab-groups-new-group--tab-bar-format-new)
-              'auto-tab-groups-eyecandy-format-new-button)))
+(ert-deftest auto-tab-groups-test-the-sole-tab-goes-where-the-reader-said ()
+  "With `tab-bar-close-last-tab-choice' set, the last tab is theirs to close.
+The refusal is there for the default, where `tab-bar-close-tab' would
+signal; a reader who named a choice gets what they asked for."
+  (let ((tab-bar-tabs-function (lambda (&optional _frame)
+                                 '(((group . "only")))))
+        closed)
+    (cl-letf (((symbol-function 'tab-bar-close-group-tabs)
+               (lambda (name) (push name closed))))
+      (let ((tab-bar-close-last-tab-choice nil))
+        (auto-tab-groups--close-tab-group "only")
+        (should-not closed))
+      (let ((tab-bar-close-last-tab-choice 'delete-frame))
+        (auto-tab-groups--close-tab-group "only")
+        (should (equal closed '("only")))))))
 
-(ert-deftest auto-tab-groups-test-a-bar-without-a-color-has-no-face ()
-  "A separator without a color wears no face at all.
-A face attribute of nil is not \"leave it alone\": the display logs it
-as an invalid attribute, twice for each redisplay of the tab bar."
-  (cl-letf (((symbol-function 'display-graphic-p) #'ignore))
-    (should-not (get-text-property
-                 0 'face (auto-tab-groups-eyecandy--get-bar-image 25 2 nil)))
-    (should (equal (get-text-property
-                    0 'face (auto-tab-groups-eyecandy--get-bar-image 25 2 "red"))
-                   '(:foreground "red" :background "red")))))
+(ert-deftest auto-tab-groups-test-a-command-that-quits-leaves-no-group ()
+  "A group made for a command that never ran goes with it.
+Its empty tab would stay, and every later run of the command would
+switch to that tab instead of doing the work."
+  (let (closed made)
+    (cl-letf (((symbol-function 'auto-tab-groups--find-tab-by-group-name)
+               (lambda (_name &optional _tabs) nil))
+              ((symbol-function 'auto-tab-groups--switch-or-create-tab-group)
+               (lambda (name) (push name made)))
+              ((symbol-function 'auto-tab-groups--close-tab-group)
+               (lambda (name) (push name closed))))
+      (should-error (auto-tab-groups--create-before
+                     "group" (lambda (&rest _) (error "No")) nil))
+      (should (equal made '("group")))
+      (should (equal closed '("group")))
+      ;; and a group that was already there is left alone
+      (setq closed nil)
+      (cl-letf (((symbol-function 'auto-tab-groups--find-tab-by-group-name)
+                 (lambda (_name &optional _tabs) 'tab)))
+        (should-error (auto-tab-groups--create-before
+                       "group" (lambda (&rest _) (error "No")) nil)))
+      (should-not closed))))
 
-(ert-deftest auto-tab-groups-test-no-menu-button-in-a-terminal ()
-  "The bar of a terminal carries no menu button.
-A terminal paints the row of the bar in the redisplay that turns the
-bar on.  With the menu button in the format, a tab that changes before
-that redisplay leaves the row blank for the rest of the session, and
-no redraw brings it back."
-  (cl-letf (((symbol-function 'display-graphic-p) (lambda (&rest _) t)))
-    (should (equal (auto-tab-groups-eyecandy--tab-bar-format)
-                   auto-tab-groups-eyecandy-tab-bar-format)))
-  (cl-letf (((symbol-function 'display-graphic-p) #'ignore))
-    (let ((format (auto-tab-groups-eyecandy--tab-bar-format)))
-      (should-not (memq 'tab-bar-format-menu-bar format))
-      ;; and the rest of the format stands
-      (should (equal format (remq 'tab-bar-format-menu-bar
-                                  auto-tab-groups-eyecandy-tab-bar-format)))))
-  ;; the option keeps the button, so a graphic display has it
-  (should (memq 'tab-bar-format-menu-bar
-                auto-tab-groups-eyecandy-tab-bar-format)))
+(ert-deftest auto-tab-groups-test-teardown-follows-the-setup ()
+  "The advice comes off the commands it went on.
+The options may change while the mode is on: the advice on the commands
+they named before must still be removable."
+  (let* ((data '(auto-tab-groups-test--command . "group"))
+         (auto-tab-groups-create-commands (list data))
+         (auto-tab-groups-close-commands nil)
+         (auto-tab-groups-initial-group-name nil)
+         (auto-tab-groups--advised nil)
+         (name (auto-tab-groups--advice-name 'create data)))
+    (unwind-protect
+        (progn
+          (auto-tab-groups--setup)
+          (should (advice-member-p name 'auto-tab-groups-test--command))
+          ;; the reader changes the option while the mode is on
+          (setq auto-tab-groups-create-commands nil)
+          (auto-tab-groups--teardown)
+          (should-not (advice-member-p name 'auto-tab-groups-test--command)))
+      (advice-remove 'auto-tab-groups-test--command name))))
+
+(ert-deftest auto-tab-groups-test-a-rule-added-while-on-is-advised ()
+  "A rule the reader adds while the mode is on is advised at once.
+The advice went on the commands the options named when the mode went
+on, so a rule added afterwards waited for the next toggle of the mode."
+  (let* ((auto-tab-groups-mode t)
+         (data '(auto-tab-groups-test--command . "group"))
+         (auto-tab-groups-create-commands nil)
+         (auto-tab-groups-close-commands nil)
+         (auto-tab-groups-initial-group-name nil)
+         (auto-tab-groups--advised nil)
+         (name (auto-tab-groups--advice-name 'create data)))
+    (unwind-protect
+        (progn
+          (auto-tab-groups--setup)
+          (should-not (advice-member-p name 'auto-tab-groups-test--command))
+          (auto-tab-groups--set-option 'auto-tab-groups-create-commands
+                                       (list data))
+          (should (advice-member-p name 'auto-tab-groups-test--command))
+          ;; and a rule taken away again takes its advice with it
+          (auto-tab-groups--set-option 'auto-tab-groups-create-commands nil)
+          (should-not (advice-member-p name 'auto-tab-groups-test--command)))
+      (advice-remove 'auto-tab-groups-test--command name))))
+
+(ert-deftest auto-tab-groups-test-a-rule-that-signals-leaves-a-record ()
+  "What went on the commands before a bad rule still comes off again.
+The rules are advised one after the other, so one that signals stops
+the setup half way through.  Each rule is therefore written down
+before its advice goes on, and not after."
+  (let* ((data '(auto-tab-groups-test--command . "group"))
+         (auto-tab-groups-create-commands (list data '("not a command" . "x")))
+         (auto-tab-groups-close-commands nil)
+         (auto-tab-groups-initial-group-name nil)
+         (auto-tab-groups--advised nil)
+         (name (auto-tab-groups--advice-name 'create data)))
+    (unwind-protect
+        (progn
+          (should-error (auto-tab-groups--setup) :type 'wrong-type-argument)
+          (should (advice-member-p name 'auto-tab-groups-test--command))
+          (auto-tab-groups--teardown)
+          (should-not (advice-member-p name 'auto-tab-groups-test--command)))
+      (advice-remove 'auto-tab-groups-test--command name))))
+
+(ert-deftest auto-tab-groups-test-a-command-that-only-asks-gets-no-group ()
+  "`project-forget-project' names a project to forget, not one to enter.
+It prompts with `project-prompter', which the create advice sits on."
+  (let ((this-command 'project-forget-project))
+    (should-not (auto-tab-groups-project-group-name default-directory)))
+  (let ((this-command 'project-switch-project))
+    (should (equal (auto-tab-groups-project-group-name
+                    (expand-file-name "../auto-tab-groups/"))
+                   (auto-tab-groups-project-group-name
+                    default-directory)))))
+
+(defun auto-tab-groups-test--groups ()
+  "Return the group of each tab of this frame, in order."
+  (mapcar (lambda (tab) (alist-get 'group tab)) (tab-bar-tabs)))
+
+(ert-deftest auto-tab-groups-test-close-leaves-ungrouped-tabs-alone ()
+  "A nil group name closes nothing.
+An ungrouped tab carries nil as its group, so `tab-bar-close-group-tabs'
+took a nil name as a match for every one of them: measured with one
+grouped and two ungrouped tabs, both ungrouped ones went.  A close
+command whose name function answers nil reaches this."
+  (let ((tab-bar-tab-post-open-functions nil))
+    (tab-bar-change-tab-group "kept")
+    (tab-bar-new-tab)
+    (tab-bar-change-tab-group "")
+    (tab-bar-new-tab)
+    (tab-bar-change-tab-group "")
+    (should (equal (auto-tab-groups-test--groups) '("kept" nil nil)))
+    (auto-tab-groups--close-tab-group nil)
+    (should (equal (auto-tab-groups-test--groups) '("kept" nil nil)))
+    ;; and the named group still closes
+    (auto-tab-groups--close-tab-group "kept")
+    (should (equal (auto-tab-groups-test--groups) '(nil nil)))))
+
+(ert-deftest auto-tab-groups-test-close-keeps-the-sole-tab ()
+  "A group that holds every tab of the frame is left alone.
+`tab-bar-close-group-tabs' ends on the last tab, and `tab-bar-close-tab'
+answers that one with \"Attempt to delete the sole tab in a frame\" —
+which came out of the command the reader had just run."
+  (tab-bar-change-tab-group "only")
+  (should (equal (auto-tab-groups-test--groups) '("only")))
+  ;; no error, and the tab stays
+  (should-not (auto-tab-groups--close-tab-group "only"))
+  (should (equal (auto-tab-groups-test--groups) '("only"))))
 
 (provide 'auto-tab-groups-test)
 ;;; auto-tab-groups-test.el ends here

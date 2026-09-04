@@ -20,7 +20,6 @@
   - [[#customization][Customization]]
     - [[#auto-tab-groups][auto-tab-groups]]
     - [[#auto-tab-groups-project][auto-tab-groups-project]]
-    - [[#auto-tab-groups-eyecandy][auto-tab-groups-eyecandy]]
   - [[#comparison-with-other-packages][Comparison with Other Packages]]
   - [[#how-it-works][How It Works]]
   - [[#contributions][Contributions]]
@@ -35,9 +34,8 @@ commands, and it creates a tab group when you call one of them.  It
 closes a tab group when you call a command from a second list.
 
 The package is a thin layer on the tab bar of Emacs.  =tab-bar.el=
-does the work, and the [[https://www.gnu.org/software/emacs/manual/html_node/emacs/Tab-Bars.html][manual]] describes its commands.  An optional
-mode styles the tab bar.  The package leaves the other tab bar
-settings to you.
+does the work, and the [[https://www.gnu.org/software/emacs/manual/html_node/emacs/Tab-Bars.html][manual]] describes its commands.  The package
+leaves the tab bar settings, and the look of the bar, to you.
 
 The recording below shows the example configuration in this file at
 work.  Each project gets a tab group of its own.  A command can open
@@ -50,7 +48,8 @@ a group of its own.  The group closes when you close the work.
 *** Prerequisites
 
 - Emacs 29.1 or later, with =tab-bar.el= and =project.el=.
-- [[https://github.com/rainstormstudio/nerd-icons.el][nerd-icons]] for the icons of the eyecandy mode.  This package is
+- [[https://github.com/rainstormstudio/nerd-icons.el][nerd-icons]] for the icons of [[https://github.com/MArpogaus/modern-tabs][modern-tabs]], which draws the tab bar in
+  the pictures here.  That package is
   optional.
 
 *** Installation
@@ -64,8 +63,7 @@ Install from MELPA with the package manager of Emacs:
 
 You can also install by hand:
 
-1. Download =auto-tab-groups.el=, =auto-tab-groups-project.el= and
-   =auto-tab-groups-eyecandy.el=.
+1. Download =auto-tab-groups.el= and =auto-tab-groups-project.el=.
 2. Put the files into your =load-path=.
 3. Add these lines to your init file:
 
@@ -76,8 +74,7 @@ You can also install by hand:
 
 *** Minimal Configuration
 
-Each project gets a tab group, and one mode gives you the modern tab
-style.  The picture above shows this configuration:
+Each project gets a tab group:
 
 #+begin_src emacs-lisp
   (use-package auto-tab-groups
@@ -85,17 +82,17 @@ style.  The picture above shows this configuration:
     :init
     ;; A tab group for each project, made by `project-switch-project'.
     (auto-tab-groups-project-mode)
-    ;; The modern tab style.  The icons come from nerd-icons, if you
-    ;; have it.  Plain strings also work:
-    ;; (auto-tab-groups-eyecandy-icons '(("HOME" . "⌂")))
-    (auto-tab-groups-eyecandy-mode)
     (auto-tab-groups-mode))
 #+end_src
+
+The look in the picture above is [[https://github.com/MArpogaus/modern-tabs][modern-tabs]], which dresses the tab
+bar and the tab line and knows nothing about tab groups being made
+automatically.  It used to live here, as =auto-tab-groups-eyecandy=.
 
 Switch to a project with =C-x p p=, and its tab group appears.  Kill
 the buffers of the project with =C-x p k=, and the group closes.
 
-If you do not use the eyecandy mode, add the groups to
+Add the groups to
 =tab-bar-format=.  The tab bar then shows them:
 
 #+begin_src emacs-lisp
@@ -123,10 +120,22 @@ groups, and a shorter name for a project group:
     (auto-tab-groups-close-commands
      '((dirvish-quit "dirvish" :ignore-result t)
        (Custom-buffer-done "customize" :ignore-result t)))
-    ;; The height of the tabs.
-    (auto-tab-groups-eyecandy-tab-height 25)
-    ;; The icons of the groups.  These need nerd-icons.
-    (auto-tab-groups-eyecandy-icons
+    :bind
+    ("<your-binding>" . auto-tab-groups-new-group)
+    :init
+    (auto-tab-groups-project-mode)
+    (auto-tab-groups-mode))
+#+end_src
+
+The icon on each group and the height of the tabs belong to
+[[https://github.com/MArpogaus/modern-tabs][modern-tabs]]:
+
+#+begin_src emacs-lisp
+  (use-package modern-tab-bar
+    :vc (:url "https://github.com/MArpogaus/modern-tabs")
+    :custom
+    (modern-tab-bar-indicator-height 25)
+    (modern-tab-bar-icons
      '(("HOME"       . (:style "suc" :icon "custom-emacs"))
        ("dirvish"    . (:style "suc" :icon "custom-folder_oct"))
        ("denote"     . (:style "md"  :icon "notebook_edit"))
@@ -134,20 +143,15 @@ groups, and a shorter name for a project group:
        ("^\\[P\\] *" . (:style "oct" :icon "repo"))
        ("^\\[T\\] *" . (:style "cod" :icon "remote"))))
     ;; Remove the prefix from the name of a project group.
-    (auto-tab-groups-eyecandy-group-name-function
-     (lambda (tab-group-name)
-       (if (string-match "^\\[.\\] *" tab-group-name)
-           (substring tab-group-name (match-end 0))
-         tab-group-name)))
-    :bind
-    ("<your-binding>" . auto-tab-groups-new-group)
+    (modern-tab-bar-group-name-function
+     (lambda (group-name)
+       (if (string-match "^\\[.\\] *" group-name)
+           (substring group-name (match-end 0))
+         group-name)))
+    ;; The new button of that package makes a tab; this makes a group.
+    (modern-tab-bar-new-command #'auto-tab-groups-new-group)
     :init
-    (auto-tab-groups-project-mode)
-    (auto-tab-groups-eyecandy-mode)
-    (auto-tab-groups-mode)
-    :hook
-    ;; The eyecandy mode needs a restart after `tab-bar-mode' goes off.
-    (tab-bar-mode . auto-tab-groups-eyecandy-mode))
+    (modern-tab-bar-mode))
 #+end_src
 
 ** Usage
@@ -172,7 +176,8 @@ stays small on purpose.
 | =auto-tab-groups-create-commands=    | alist    | the commands that make a group or switch to one |
 | =auto-tab-groups-close-commands=     | alist    | the commands that close a group                 |
 | =auto-tab-groups-new-choice=         | multiple | what happens when a new tab appears             |
-| =auto-tab-groups-initial-group-name= | string   | the name of the first group                     |
+| =auto-tab-groups-initial-group-name= | string   | the name of a group for a frame that has none   |
+
 | =auto-tab-groups-before-create-hook= | hook     | runs before the package makes a group           |
 | =auto-tab-groups-after-create-hook=  | hook     | runs after the package makes a group            |
 | =auto-tab-groups-before-delete-hook= | hook     | runs before the package deletes a group         |
@@ -180,6 +185,10 @@ stays small on purpose.
 
 =auto-tab-groups-echo-mode= prints a message in the echo area for
 each group that the package makes, switches to or closes.
+
+Each option takes effect at once: a rule you add or change with
+=customize= or =setopt= while the mode is on needs no toggle of the
+mode.
 
 Each entry of =auto-tab-groups-create-commands= and
 =auto-tab-groups-close-commands= has two parts:
@@ -214,54 +223,6 @@ also use this function in your own rules.  It takes what the command
 returned: a directory, a buffer or the name of a known project.  The
 mode has no options of its own.
 
-*** auto-tab-groups-eyecandy
-
-=auto-tab-groups-eyecandy-mode= styles the tab bar.  The tab bar as
-Emacs draws it, with the groups in it:
-
-[[file:img/tab-bar-plain.png]]
-
-And the same four groups with the mode on, in the configuration
-example above:
-
-[[file:img/tab-bar.png]]
-
-The current group is at the left with its tab.  The other groups
-follow, with an icon on each, and the button at the end makes a new
-group.  The prefix of the project group is gone, because the example
-gives =auto-tab-groups-eyecandy-group-name-function= a function that
-takes it off.
-
-| Option                                                      | Type          | Description                             |
-|-------------------------------------------------------------+---------------+-----------------------------------------|
-| =auto-tab-groups-eyecandy-icons=                              | alist         | the icon for each group name            |
-| =auto-tab-groups-eyecandy-tab-height=                         | number        | the height of a tab in pixels           |
-| =auto-tab-groups-eyecandy-default-icon=                       | string, plist | the icon for a group without a match    |
-| =auto-tab-groups-eyecandy-tab-bar-format=                     | list          | the elements of the tab bar             |
-| =auto-tab-groups-eyecandy-group-name-function=                 | function      | a function that changes the group name  |
-
-Each entry of =auto-tab-groups-eyecandy-icons= has two parts:
-
-- CAR: a regular expression for the name of the group.
-- CDR: a string, or a specification for nerd-icons.  A specification
-  is a plist with the keys =:style= and =:icon=, and it needs
-  [[https://github.com/rainstormstudio/nerd-icons.el][nerd-icons]].
-
-The first entry that matches wins.  An icon that the frame cannot
-draw falls back to a plain character.
-
-*** In the Terminal
-
-The eyecandy mode works in =emacs -nw=.  Two elements of the bar
-behave differently there, and the mode takes care of both:
-
-- A spacer is a plain space.  A terminal draws no part of a cell.
-- The bar has no menu button.  A terminal paints the row of the bar in
-  the redisplay that turns the bar on.  With the menu button on the
-  row, a tab that changes before that redisplay leaves the row blank
-  for the rest of the session.  =M-x menu-bar-open= (=F10=) opens the
-  same menu.
-
 ** Comparison with Other Packages
 
 - [[https://github.com/mclear-tools/tabspaces][tabspaces]] uses the tab bar and =project.el= to make workspaces with
@@ -274,8 +235,7 @@ behave differently there, and the mode takes care of both:
 ** How It Works
 
 [[file:docs/implementation.org][docs/implementation.org]] describes the implementation: the advice
-around your commands, the way the package finds a group, and how the
-eyecandy mode draws the tab bar.
+around your commands and the way the package finds a group.
 
 ** Contributions
 
