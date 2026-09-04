@@ -5,7 +5,6 @@
 ;; Author: Marcel Arpogaus <znepry.necbtnhf@tznvy.pbz>
 ;; Assisted-by: Claude:claude-opus-5
 ;; Version: 0.4
-;; Package-Requires: ((emacs "29.1"))
 ;; Keywords: convenience, tabs
 ;; URL: https://github.com/MArpogaus/auto-tab-groups
 
@@ -28,7 +27,8 @@
 
 ;; This companion package provides the necessary glue code to make
 ;; `auto-tab-groups-mode' work together with `project.el', to mimic the
-;; behavior of [[https://github.com/fritzgrabo/project-tab-groups][project-tab-groups.el]]
+;; behavior of project-tab-groups.el:
+;; https://github.com/fritzgrabo/project-tab-groups
 
 ;;; Code:
 (require 'project)
