@@ -28,6 +28,6 @@ Do not resample the frame rate afterwards.  Dropping frames makes the
 motion uneven.
 
 The look of the bar in the recording is
-[[https://github.com/MArpogaus/modern-tab-bars][modern-tab-bars]], which =demo.el= configures.  The pictures of that
+[[https://github.com/MArpogaus/modern-tabs][modern-tabs]], which =demo.el= configures.  The pictures of that
 bar belong to its own repository.
 
