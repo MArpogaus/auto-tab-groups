@@ -108,7 +108,7 @@ groups, and a shorter name for a project group:
 
 #+begin_src emacs-lisp
   (use-package auto-tab-groups
-    :straight (:host github :repo "MArpogaus/auto-tab-groups")
+    :vc (:url "https://github.com/MArpogaus/auto-tab-groups" :rev :newest)
     :after tab-bar project nerd-icons
     :custom
     ;; Make a tab group for denote, dirvish and customize buffers.
