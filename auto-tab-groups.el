@@ -367,11 +367,16 @@ The hook comes off first, and a record that cannot be honoured is
 reported and skipped rather than left to stop the rest.  A rule that
 names something other than a command signals in the setup, and its
 record is there because a record is written before the advice goes
-on."
+on.
+
+The error is caught rather than demoted: `with-demoted-errors' lets it
+through where the debugger is on, and the rest of the records would
+then keep their advice for the rest of the session."
   (remove-hook 'after-make-frame-functions #'auto-tab-groups--after-make-frame-function)
   (pcase-dolist (`(,kind . ,command-data) auto-tab-groups--advised)
-    (with-demoted-errors "auto-tab-groups: %S"
-      (auto-tab-groups--advice-remove kind command-data)))
+    (condition-case err
+        (auto-tab-groups--advice-remove kind command-data)
+      (error (message "auto-tab-groups: %S" err))))
   (setq auto-tab-groups--advised nil))
 
 ;;;###autoload
