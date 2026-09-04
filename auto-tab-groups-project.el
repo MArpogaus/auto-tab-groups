@@ -4,8 +4,7 @@
 
 ;; Author: Marcel Arpogaus <znepry.necbtnhf@tznvy.pbz>
 ;; Assisted-by: Claude:claude-opus-5
-;; Version: 0.4
-;; Package-Requires: ((emacs "29.1"))
+;; Version: 0.5
 ;; Keywords: convenience, tabs
 ;; URL: https://github.com/MArpogaus/auto-tab-groups
 
@@ -28,7 +27,8 @@
 
 ;; This companion package provides the necessary glue code to make
 ;; `auto-tab-groups-mode' work together with `project.el', to mimic the
-;; behavior of [[https://github.com/fritzgrabo/project-tab-groups][project-tab-groups.el]]
+;; behavior of project-tab-groups.el:
+;; https://github.com/fritzgrabo/project-tab-groups
 
 ;;; Code:
 (require 'project)
@@ -54,13 +54,6 @@ directory, `project-switch-to-buffer' a buffer, and
                               thing))
                      (mapcar #'expand-file-name (project-known-project-roots))))))
 
-(defun auto-tab-groups-project--get-project-type (dir)
-  "Return the type of the project in DIR."
-  (when-let* ((project (if (and dir (stringp dir)) (project-current nil dir)
-                         (project-current nil)))
-              (project-root (project-root project)))
-    (if (file-remote-p project-root) ?T ?P)))
-
 (defvar auto-tab-groups-project--create-commands
   '((project-prompt-project-dir project-prompt-project-name project-switch-to-buffer) . auto-tab-groups-project-group-name))
 
@@ -70,10 +63,30 @@ directory, `project-switch-to-buffer' a buffer, and
 (defun auto-tab-groups-project--project-kill-buffers-advice (orig-fun &rest args)
   "Return the root of the current project when ORIG-FUN killed its buffers.
 ORIG-FUN is `project-kill-buffers', ARGS its arguments.  The tab group
-name function needs the directory, which is gone once the buffers are."
-  (when-let* ((project (project-current t))
-              (dir (project-root project)))
-    (when (apply orig-fun args) dir)))
+name function needs the directory, which is gone once the buffers are.
+The project is asked for without a prompt.  `project-kill-buffers' asks
+with a prompt of its own, and a prompt here comes first — through the
+advised `project-prompt-project-dir', which creates a group for the
+answer to a question the command then asks again.  The buffers of the
+second answer were killed and the group of the first one closed.
+
+A killed buffer decides, not the command's answer: where it finds none
+to kill it returns the string of its own message, which is not nil, and
+the group went although nothing had.  A reader who declines the
+confirmation gets the same answer, and no group closes.
+
+Whether any buffer died, not whether the project has none left.
+`project-kill-buffer-conditions' keeps what it does not name, and
+`project-buffers' counts every buffer whose `default-directory' lies
+under the root — `*scratch*' and the minibuffer among them for a project
+that holds the directory Emacs started in.  Asking for an empty project
+therefore never closed a group at all."
+  (if-let* ((project (project-current nil))
+            (dir (project-root project))
+            (before (length (buffer-list))))
+      (progn (apply orig-fun args)
+             (and (< (length (buffer-list)) before) dir))
+    (apply orig-fun args)))
 
 (defun auto-tab-groups-project--setup ()
   "Perform configurations necessary for `auto-tab-groups-project-mode'."
@@ -88,14 +101,28 @@ name function needs the directory, which is gone once the buffers are."
   (auto-tab-groups--advice-remove 'close auto-tab-groups-project--close-commands))
 
 ;;;###autoload
+(defvar auto-tab-groups-project-asking-commands
+  '(project-forget-project)
+  "Commands that ask for a project without entering it.
+They prompt with `project-prompter', which is
+`project-prompt-project-dir' by default and which the create advice
+sits on, so the answer to their question would otherwise open a group:
+for `project-forget-project' a group for the project it then forgets.")
+
 (defun auto-tab-groups-project-group-name (thing)
   "Return the tab group name for the project THING belongs to.
 THING is what the command returned: a directory, a buffer, or the
-name of a known project."
-  (when-let* ((dir (auto-tab-groups-project--directory thing))
-              (project-name (auto-tab-groups-project--get-project-name dir))
-              (project-type (auto-tab-groups-project--get-project-type dir)))
-    (format "[%c] %s" project-type project-name)))
+name of a known project.  Nil for the commands of
+`auto-tab-groups-project-asking-commands', which only ask."
+  (when-let* (((not (memq this-command
+                          auto-tab-groups-project-asking-commands)))
+              (dir (auto-tab-groups-project--directory thing))
+              ;; one `project-current' for the name and the letter both:
+              ;; measured, that call is 24.7 of the 221 microseconds this
+              ;; function cost, and it ran twice
+              (project (project-current nil dir))
+              (root (project-root project)))
+    (format "[%c] %s" (if (file-remote-p root) ?T ?P) (project-name project))))
 
 ;;;###autoload
 (define-minor-mode auto-tab-groups-project-mode
