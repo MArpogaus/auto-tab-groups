@@ -4,7 +4,7 @@
 
 ;; Author: Marcel Arpogaus <znepry.necbtnhf@tznvy.pbz>
 ;; Assisted-by: Claude:claude-opus-5
-;; Version: 0.5
+;; Version: 1.0
 ;; Package-Requires: ((emacs "29.1"))
 ;; Keywords: convenience, tabs
 ;; URL: https://github.com/MArpogaus/auto-tab-groups
@@ -61,21 +61,21 @@ Each element should be a cons cell:
   - A string: Name of the tab group.
   - A function: Called to determine the group name.  Its result should be a
                 string.  The command runs first and its result is passed to
-                the function, unless `:ignore-result' is non-nil: then the
+                the function, unless `:before-command' is non-nil: then the
                 group is created before the command runs and the function is
                 called with no argument.
   - A plist: Provides additional options.  Currently supported properties:
     - `:tab-group-name': Group name (string) or a function returning a string.
-    - `:ignore-result':  If non-nil, the tab group is created before the
+    - `:before-command': If non-nil, the tab group is created before the
                          command runs, and a name function is called with no
                          argument.  If nil, the command runs first and its
                          result is passed to a name function.
 
 Example:
 
- ((my-open-command1 \"my-group\" :ignore-result t)
+ ((my-open-command1 \"my-group\" :before-command t)
   ((my-open-command2 my-open-command3) :tab-group-name \"my-group2\"
-                                       :ignore-result t)
+                                       :before-command t)
   ((my-open-command4 my-open-command5) :tab-group-name \"my-group3\"))
 
 See `auto-tab-groups-project-group-name' for a group name that follows
@@ -96,14 +96,14 @@ Each element should be a cons cell:
                 string.
   - A plist: Provides additional options.  Currently supported properties:
     - `:tab-group-name': Group name (string) or a function returning a string.
-    - `:ignore-result':  If non-nil, the tab group will be closed regardless of
+    - `:always-close':   If non-nil, the tab group will be closed regardless of
                          the command's result.  If nil, the group is only closed
                          if the command returns non-nil.
 
 Example:
 
- ((my-close-command1 :tab-group-name \"my-group2\" :ignore-result t)
-  (my-close-command2 \"my-group3\" :ignore-result t))
+ ((my-close-command1 :tab-group-name \"my-group2\" :always-close t)
+  (my-close-command2 \"my-group3\" :always-close t))
 
 See `auto-tab-groups-project-group-name' for a group name that follows
 the current project."
@@ -163,9 +163,11 @@ the list already does not pass its own."
 (defun auto-tab-groups--get-group-spec (command-data)
   "Return the group specification of COMMAND-DATA as a plist.
 
-The returned plist contains:
-`:tab-group-name' - The group name (string or function).
-`:ignore-result' - Whether to ignore the command's result (boolean).
+The returned plist carries `:tab-group-name', the group name as a
+string or a function, and whichever flag the rule named:
+`:before-command' in a create rule, `:always-close' in a close one.
+Each is read where it is used, and neither means anything to the other
+kind of rule.
 
 The result is a fresh list: the input belongs to the user's
 customization and may not be modified."
@@ -177,7 +179,7 @@ customization and may not be modified."
      ;; already a plist, `(command :tab-group-name "name" ...)'
      ((keywordp (car spec))
       (copy-sequence spec))
-     ;; name first, `(command "name" :ignore-result t)'
+     ;; name first, `(command "name" :before-command t)'
      (t
       (append (list :tab-group-name (car spec)) (cdr spec))))))
 
@@ -191,7 +193,9 @@ it, and `1+' of nil is an error rather than a missing tab."
     (message "Switched to tab group: %s" (alist-get 'group tab))))
 
 (defun auto-tab-groups--current-group ()
-  "Return the group name of the current tab, or nil."
+  "Return the group name of the current tab, or nil.
+`tab-bar--current-tab-find' is private to tab-bar, and the only way to
+the current tab's alist: `tab-bar-tabs' answers with the list of them."
   (alist-get 'group (tab-bar--current-tab-find)))
 
 (defun auto-tab-groups--switch-or-create-tab-group (tab-group-name)
@@ -279,7 +283,7 @@ belongs to."
   (lambda (orig-fun &rest args)
     (let* ((name-or-function (plist-get tab-group-spec :tab-group-name))
            (functionp (functionp name-or-function)))
-      (if (or (not functionp) (plist-get tab-group-spec :ignore-result))
+      (if (or (not functionp) (plist-get tab-group-spec :before-command))
           (auto-tab-groups--create-before
            (if functionp (funcall name-or-function) name-or-function)
            orig-fun args)
@@ -288,23 +292,26 @@ belongs to."
 (defun auto-tab-groups--get-close-advice (tab-group-spec)
   "Get advice function to handle tab group closing based on TAB-GROUP-SPEC."
   (lambda (orig-fun &rest args)
-    (let* ((result (apply orig-fun args))
-           (tab-group-name-or-func (plist-get tab-group-spec :tab-group-name))
-           (ignore-result (plist-get tab-group-spec :ignore-result))
-           (tab-group-name (if (functionp tab-group-name-or-func)
-                               (funcall tab-group-name-or-func result)
-                             tab-group-name-or-func)))
-      (when (or ignore-result result)
-        (auto-tab-groups--close-tab-group tab-group-name))
+    (let ((result (apply orig-fun args))
+          (name (plist-get tab-group-spec :tab-group-name)))
+      ;; The name is asked for inside the `when': a command that
+      ;; answered nil closes nothing, and a name function has no
+      ;; business running for an answer nobody reads.
+      (when (or (plist-get tab-group-spec :always-close) result)
+        (auto-tab-groups--close-tab-group
+         (if (functionp name) (funcall name result) name)))
       result)))
 
 (defun auto-tab-groups--after-make-frame-function (&optional frame)
   "Initialize new group or clone existing one when new FRAME is created."
+  ;; `tab-bar--current-tab' is private to tab-bar; see
+  ;; `auto-tab-groups--current-group'.
   (let ((tab-group-name (funcall tab-bar-tab-group-function (tab-bar--current-tab))))
     ;; `select-frame' without a restore leaves the wrong frame selected
     ;; for whoever made one it did not mean to show.
     (with-selected-frame (or frame (selected-frame))
-      (tab-group (or tab-group-name auto-tab-groups-initial-group-name)))))
+      (tab-bar-change-tab-group
+       (or tab-group-name auto-tab-groups-initial-group-name)))))
 
 (defun auto-tab-groups--commands (command-data)
   "Return the list of commands named by COMMAND-DATA."
@@ -409,7 +416,7 @@ then keep their advice for the rest of the session."
     ;; own: any other choice leaves the window where it was, and its
     ;; history is the history of that window.
     (when (stringp tab-bar-new-tab-choice)
-      (set-window-prev-buffers (get-buffer-window) nil)))
+      (set-window-prev-buffers (selected-window) nil)))
   (tab-bar-change-tab-group tab-group-name)
   (when auto-tab-groups-echo-mode
     (message "Created new tab group: %s" tab-group-name))

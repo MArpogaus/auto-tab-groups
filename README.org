@@ -87,7 +87,7 @@ Each project gets a tab group:
 
 The look in the picture above is [[https://github.com/MArpogaus/modern-tabs][modern-tabs]], which dresses the tab
 bar and the tab line and knows nothing about tab groups being made
-automatically.  It used to live here, as =auto-tab-groups-eyecandy=.
+automatically.
 
 Switch to a project with =C-x p p=, and its tab group appears.  Kill
 the buffers of the project with =C-x p k=, and the group closes.
@@ -108,7 +108,7 @@ groups, and a shorter name for a project group:
 
 #+begin_src emacs-lisp
   (use-package auto-tab-groups
-    :straight (:host github :repo "MArpogaus/auto-tab-groups")
+    :vc (:url "https://github.com/MArpogaus/auto-tab-groups" :rev :newest)
     :after tab-bar project nerd-icons
     :custom
     ;; Make a tab group for denote, dirvish and customize buffers.
@@ -118,8 +118,8 @@ groups, and a shorter name for a project group:
        ((custom-buffer-create-internal) . "customize")
        ((dirvish dirvish-fd) . "dirvish")))
     (auto-tab-groups-close-commands
-     '((dirvish-quit "dirvish" :ignore-result t)
-       (Custom-buffer-done "customize" :ignore-result t)))
+     '((dirvish-quit "dirvish" :always-close t)
+       (Custom-buffer-done "customize" :always-close t)))
     :bind
     ("<your-binding>" . auto-tab-groups-new-group)
     :init
@@ -195,15 +195,20 @@ Each entry of =auto-tab-groups-create-commands= and
 
 - CAR: one command, or a list of commands.
 - CDR: the name of the group, or a function that returns the name, or
-  a plist with the keys =:tab-group-name= and =:ignore-result=.
+  a plist with =:tab-group-name= and the flag of that kind of rule.
 
 For a create command the package runs the command first and gives the
-result to the name function.  With =:ignore-result= it makes the
+result to the name function.  With =:before-command= it makes the
 group first, and calls the name function with no argument.
 
 For a close command the package closes the group if the command
-returns a value.  With =:ignore-result= it closes the group in each
+returns a value.  With =:always-close= it closes the group in each
 case.
+
+The two flags carry different names because they decide different
+things: =:before-command= decides when the group is made and whether
+the name function is handed anything, =:always-close= decides whether
+the command's answer may call the closing off.
 
 *** auto-tab-groups-project
 

@@ -4,7 +4,7 @@
 
 ;; Author: Marcel Arpogaus <znepry.necbtnhf@tznvy.pbz>
 ;; Assisted-by: Claude:claude-opus-5
-;; Version: 0.5
+;; Version: 1.0
 ;; Keywords: convenience, tabs
 ;; URL: https://github.com/MArpogaus/auto-tab-groups
 
@@ -54,11 +54,22 @@ directory, `project-switch-to-buffer' a buffer, and
                               thing))
                      (mapcar #'expand-file-name (project-known-project-roots))))))
 
-(defvar auto-tab-groups-project--create-commands
-  '((project-prompt-project-dir project-prompt-project-name project-switch-to-buffer) . auto-tab-groups-project-group-name))
+(defconst auto-tab-groups-project--create-commands
+  '((project-prompt-project-dir
+     project-prompt-project-name
+     project-switch-to-buffer)
+    . auto-tab-groups-project-group-name)
+  "The rule that opens a group for the project a command entered.
+Read as `auto-tab-groups-create-commands' reads its own elements: the
+three commands answer with three different things, and
+`auto-tab-groups-project--directory' knows which is which.")
 
-(defvar auto-tab-groups-project--close-commands
-  '(project-kill-buffers . auto-tab-groups-project-group-name))
+(defconst auto-tab-groups-project--close-commands
+  '(project-kill-buffers . auto-tab-groups-project-group-name)
+  "The rule that closes the group of a project whose buffers are gone.
+Read as `auto-tab-groups-close-commands' reads its own elements.  The
+name comes from the advice below, not from the command: the directory
+is gone once the buffers are.")
 
 (defun auto-tab-groups-project--project-kill-buffers-advice (orig-fun &rest args)
   "Return the root of the current project when ORIG-FUN killed its buffers.

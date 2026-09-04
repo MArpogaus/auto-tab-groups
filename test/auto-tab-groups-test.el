@@ -54,16 +54,16 @@
   (should (equal (auto-tab-groups--get-group-spec '(cmd . ignore))
                  '(:tab-group-name ignore)))
   (should (equal (plist-get (auto-tab-groups--get-group-spec
-                             '(cmd "group" :ignore-result t))
+                             '(cmd "group" :before-command t))
                             :tab-group-name)
                  "group"))
   (should (plist-get (auto-tab-groups--get-group-spec
-                      '(cmd "group" :ignore-result t))
-                     :ignore-result))
+                      '(cmd "group" :before-command t))
+                     :before-command))
   ;; the plist form from the docstring examples
   (should (equal (auto-tab-groups--get-group-spec
-                  '(cmd :tab-group-name "group" :ignore-result t))
-                 '(:tab-group-name "group" :ignore-result t)))
+                  '(cmd :tab-group-name "group" :before-command t))
+                 '(:tab-group-name "group" :before-command t)))
   ;; a lambda is a spec, and in interpreted code also a list
   (let ((spec (auto-tab-groups--get-group-spec
                (cons 'cmd (lambda () "dyn")))))
@@ -71,12 +71,12 @@
 
 (ert-deftest auto-tab-groups-test-group-spec-copies ()
   "Normalizing never modifies the user's customization data."
-  (let ((user (list "group" :ignore-result t)))
+  (let ((user (list "group" :before-command t)))
     (auto-tab-groups--get-group-spec (cons 'cmd user))
-    (should (equal user '("group" :ignore-result t))))
+    (should (equal user '("group" :before-command t))))
   (let ((user (list :tab-group-name "group")))
     (plist-put (auto-tab-groups--get-group-spec (cons 'cmd user))
-               :ignore-result t)
+               :before-command t)
     (should (equal user '(:tab-group-name "group")))))
 
 (ert-deftest auto-tab-groups-test-commands ()
@@ -132,12 +132,12 @@ the group of the second was ever made."
       (should (eq (funcall advice #'auto-tab-groups-test--command) 'result))
       (should (equal auto-tab-groups-test--switched "result")))))
 
-(ert-deftest auto-tab-groups-test-create-advice-ignore-result ()
-  "With :ignore-result the group is created before the command runs."
+(ert-deftest auto-tab-groups-test-create-advice-before-command ()
+  "With :before-command the group is created before the command runs."
   (auto-tab-groups-test--with-stub
     (let ((advice (auto-tab-groups--get-create-advice
                    (list :tab-group-name (lambda (&rest _) "early")
-                         :ignore-result t))))
+                         :before-command t))))
       (should (eq (funcall advice #'auto-tab-groups-test--command) 'result))
       (should (equal auto-tab-groups-test--switched "early")))))
 
@@ -434,6 +434,49 @@ which came out of the command the reader had just run."
   ;; no error, and the tab stays
   (should-not (auto-tab-groups--close-tab-group "only"))
   (should (equal (auto-tab-groups-test--groups) '("only"))))
+
+(ert-deftest auto-tab-groups-test-a-new-frame-gets-the-initial-group ()
+  "A frame whose tab carries no group gets the name the reader chose.
+`auto-tab-groups-initial-group-name\' is what a frame with no group of
+its own is given; a frame made from a grouped one keeps that group."
+  (let ((auto-tab-groups-initial-group-name "HOME")
+        (was (alist-get 'group (tab-bar--current-tab))))
+    (unwind-protect
+        (progn
+          (tab-bar-change-tab-group nil)
+          (auto-tab-groups--after-make-frame-function)
+          (should (equal (alist-get 'group (tab-bar--current-tab)) "HOME"))
+          ;; and a group already there is the one it keeps
+          (tab-bar-change-tab-group "mine")
+          (auto-tab-groups--after-make-frame-function)
+          (should (equal (alist-get 'group (tab-bar--current-tab)) "mine")))
+      (tab-bar-change-tab-group was))))
+
+(ert-deftest auto-tab-groups-test-new-group-forgets-the-old-buffers ()
+  "A group opened on a buffer of its own starts with no buffer history.
+A new tab keeps the window of the tab it was made from, and a window
+keeps the buffers it showed: without this the new group walked back into
+the buffers of the old one with `previous-buffer\'."
+  (let* ((auto-tab-groups-new-choice "*scratch*")
+         (tab-bar-tab-post-open-functions nil)
+         (before (length (funcall tab-bar-tabs-function)))
+         ;; a buffer that outlives the call: `window-prev-buffers'
+         ;; drops an entry whose buffer has died, so a temporary one
+         ;; would leave nothing to clear
+         (old (get-buffer-create "*auto-tab-groups-test-old*")))
+    ;; an entry is (BUFFER START POINT), and the two positions are
+    ;; markers: `set-window-prev-buffers' refuses anything else.
+    (set-window-prev-buffers
+     nil (list (list old (copy-marker 1) (copy-marker 1))))
+    (should (window-prev-buffers))
+    (unwind-protect
+        (progn
+          (auto-tab-groups-new-group "fresh")
+          (should (equal (alist-get 'group (tab-bar--current-tab)) "fresh"))
+          (should-not (window-prev-buffers)))
+      (when (> (length (funcall tab-bar-tabs-function)) before)
+        (tab-bar-close-tab))
+      (kill-buffer old))))
 
 (provide 'auto-tab-groups-test)
 ;;; auto-tab-groups-test.el ends here
