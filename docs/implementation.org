@@ -29,23 +29,29 @@ see the answer of the command, and not the answer of the bookkeeping.
 
 ** The create advice
 
-The advice has two roads.  =:ignore-result= chooses the road:
+The advice has two roads.  =:before-command= chooses the road:
 
-- Without =:ignore-result= the command runs first.  The advice then
+- Without =:before-command= the command runs first.  The advice then
   gives the result to the name function and makes the group.  The
   command has already shown its buffer at that time, and the buffer
   is in the tab that was current.  The advice therefore saves the
   window configuration, puts the old tab back, and carries the buffer
   into the new group.
-- With =:ignore-result= the advice makes the group first and calls
+- With =:before-command= the advice makes the group first and calls
   the name function with no argument.  The command then runs in the
   new group.
+
+The flag says when, not whether: a create rule never consults the
+command's result, so what =:before-command= decides is when the group
+is made and whether the name function is handed anything.  A close rule
+carries a flag of its own, =:always-close=, and that one does decide
+whether the result may call the closing off.
 
 ** The close advice
 
 The advice runs the command and closes the group after it.  It closes
 the group if the command returns a value, or in each case with
-=:ignore-result=.  The name function is asked for the name inside that
+=:always-close=.  The name function is asked for the name inside that
 condition: a command that answered nil closes nothing, and a name
 function of the reader's has no business running for an answer nobody
 reads.
@@ -103,7 +109,7 @@ the name function answers nil for the commands in
 stub in the place of the switch function, and it tests:
 
 - the group specification, in each of its three forms
-- the name function, with and without =:ignore-result=
+- the name function, with and without =:before-command=
 - the return value of both advice functions
 - the buffer that the create advice carries into the new group
 - the group made for a command that then quits
