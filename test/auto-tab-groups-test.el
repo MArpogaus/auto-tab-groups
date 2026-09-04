@@ -434,3 +434,6 @@ which came out of the command the reader had just run."
   ;; no error, and the tab stays
   (should-not (auto-tab-groups--close-tab-group "only"))
   (should (equal (auto-tab-groups-test--groups) '("only"))))
+
+(provide 'auto-tab-groups-test)
+;;; auto-tab-groups-test.el ends here
