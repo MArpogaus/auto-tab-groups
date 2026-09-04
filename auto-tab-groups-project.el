@@ -4,7 +4,7 @@
 
 ;; Author: Marcel Arpogaus <znepry.necbtnhf@tznvy.pbz>
 ;; Assisted-by: Claude:claude-opus-5
-;; Version: 0.4
+;; Version: 0.5
 ;; Keywords: convenience, tabs
 ;; URL: https://github.com/MArpogaus/auto-tab-groups
 
