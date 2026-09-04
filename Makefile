@@ -49,8 +49,12 @@ compile: $(STAMP)
 	  -f batch-byte-compile $(SRC) $(TEST)
 	@rm -f ./*.elc test/*.elc
 
+# One package, two files: package-lint reads the headers of the main
+# file for both, as MELPA does, and a Package-Requires anywhere else
+# has no effect.
 lint: $(STAMP)
-	@$(BATCH) -f package-lint-batch-and-exit $(SRC)
+	@$(BATCH) --eval '(setq package-lint-main-file "auto-tab-groups.el")' \
+	  -f package-lint-batch-and-exit $(SRC)
 
 # What checkdoc and package-lint both let through: a docstring escape
 # written \= rather than \\=, which the reader eats, so `describe-function'

@@ -29,8 +29,11 @@
 ;; `auto-tab-groups-mode' allows you to automatically create and manage
 ;; tab groups based on specific Emacs commands.  It switches to existing
 ;; tab groups or creates new ones based on user-defined configurations.
-;; The mode can also delete tab groups when specific commands are invoked.
-;; This work has been heavily inspired by [[https://github.com/fritzgrabo/project-tab-groups][project-tab-groups.el]]
+;; The mode can also delete tab groups when specific commands are
+;; invoked.
+;;
+;; The work is heavily inspired by project-tab-groups.el:
+;; https://github.com/fritzgrabo/project-tab-groups
 
 ;;; Code:
 (require 'tab-bar)
@@ -124,7 +127,7 @@ Refer to `tab-bar-new-tab-choice' for details."
                  (const :tag "Current window" window)
                  (string :tag "Buffer" "*scratch*")
                  (directory :tag "Directory" :value "~/")
-                 (file :tag "File" :value "~/.emacs")
+                 (file :tag "File")
                  (function  :tag "Function")
                  (const :tag "Duplicate tab" clone)))
 
