@@ -232,7 +232,7 @@ must get the command's and not the bookkeeping's."
     (should-not (auto-tab-groups--find-tab-by-group-name "three"))))
 
 (ert-deftest auto-tab-groups-test-project-close-asks-nothing-and-counts-the-dead ()
-  "The close advice prompts for no project and reads the buffer list, not the answer.
+  "The close advice prompts for no project, and reads the buffer list.
 `project-kill-buffers' asks with a prompt of its own, and a prompt in
 the advice came first — through the advised `project-prompt-project-dir',
 which creates a group for the answer to a question the command then asks
