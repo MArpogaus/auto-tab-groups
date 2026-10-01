@@ -24,6 +24,7 @@
   - [[#comparison-with-other-packages][Comparison with Other Packages]]
   - [[#how-it-works][How It Works]]
   - [[#contributions][Contributions]]
+  - [[#use-of-llm-coding-tools][Use of LLM Coding Tools]]
   - [[#license][License]]
   - [[#contact][Contact]]
   - [[#acknowledgments][Acknowledgments]]
@@ -247,6 +248,12 @@ around your commands and the way the package finds a group.
 
 Contributions are greatly appreciated!  Feel free to check the
 [[https://github.com/MArpogaus/auto-tab-groups/issues][issues page]] or submit a [[https://github.com/MArpogaus/auto-tab-groups/pulls][pull request]].
+
+** Use of LLM Coding Tools
+
+Parts of this package were written with the help of a large
+language model (LLM) coding assistant.  A person reviewed and tested
+every change before it was committed.
 
 ** License
 
