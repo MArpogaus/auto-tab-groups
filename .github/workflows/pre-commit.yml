@@ -13,7 +13,7 @@ jobs:
     - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97   # v7.0.0
       with:
         python-version: 3.x
-    # The local hooks call make, which calls Emacs.  Emacs 31.1, the
+    # The local hooks call make, which calls Emacs. Emacs 31.1, the
     # release the checks are written against, not whichever one the
     # runner image ships and not the older release this job used to
     # name: checkdoc up to 30.2 reports a doc string line over 80
@@ -35,7 +35,7 @@ jobs:
         sudo apt-get install emacs && emacs --version
         git clone --depth 1 https://github.com/riscy/melpazoid.git ~/melpazoid
     # melpazoid asks GitHub about the repository the recipe names, so it
-    # must be one that exists.  The string is unquoted because the YAML
+    # must be one that exists. The string is unquoted because the YAML
     # formatter writes a plain scalar, and a quoted one fails that hook.
     - env:
         LOCAL_REPO: ${{ github.workspace }}

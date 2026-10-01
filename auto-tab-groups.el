@@ -262,7 +262,7 @@ belongs to."
          (shown (current-buffer))
          (name (funcall name-function results))
          ;; A command that only prompts shows no buffer and the new tab
-         ;; stays as it is.  Switching to the buffer that was current
+         ;; stays as it is. Switching to the buffer that was current
          ;; already changes nothing to compare, so a returned buffer,
          ;; another current buffer, or a window layout that is not the
          ;; one from before are the three signs of a buffer shown: a
@@ -410,9 +410,9 @@ then keep their advice for the rest of the session."
   (let ((tab-bar-new-tab-choice auto-tab-groups-new-choice))
     (tab-bar-new-tab)
     ;; A new tab keeps the window of the tab it was made from, and a
-    ;; window keeps the buffers it showed before.  Without this the
+    ;; window keeps the buffers it showed before. Without this the
     ;; new group would walk back into the buffers of the old one with
-    ;; `previous-buffer'.  Only where the choice is a buffer of its
+    ;; `previous-buffer'. Only where the choice is a buffer of its
     ;; own: any other choice leaves the window where it was, and its
     ;; history is the history of that window.
     (when (stringp tab-bar-new-tab-choice)

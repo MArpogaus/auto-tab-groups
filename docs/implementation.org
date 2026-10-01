@@ -1,57 +1,57 @@
 #+TITLE: How auto-tab-groups works
 #+OPTIONS: toc:2
 
-This document describes the implementation.  The [[file:../README.org][README]] tells you how
+This document describes the implementation. The [[file:../README.org][README]] tells you how
 to use the package.
 
 * The advice around your commands
 
 =auto-tab-groups-mode= puts an =:around= advice on each command in
 =auto-tab-groups-create-commands= and in
-=auto-tab-groups-close-commands=.  The mode removes the advice when
+=auto-tab-groups-close-commands=. The mode removes the advice when
 it goes off.
 
 Each rule brings its own advice, and the name of that advice holds the
-rule.  =advice-add= takes advice of a name that is there already off
+rule. =advice-add= takes advice of a name that is there already off
 the command first, so one name for each kind let a second rule on the
 same command replace the first.
 
 The mode writes a rule into =auto-tab-groups--advised= before the
 advice of that rule goes on, and it reads that record when it goes off:
 the advice comes off the commands it went on, and not off the ones the
-options name by then.  The options may change while the mode is on,
+options name by then. The options may change while the mode is on,
 because the three the setup reads put the advice on again from their
 =:set= function.
 
-An advice stands in for the command.  It therefore returns what the
-command returned.  A caller that uses the answer of the command must
+An advice stands in for the command. It therefore returns what the
+command returned. A caller that uses the answer of the command must
 see the answer of the command, and not the answer of the bookkeeping.
 
 ** The create advice
 
-The advice has two roads.  =:before-command= chooses the road:
+The advice has two roads. =:before-command= chooses the road:
 
-- Without =:before-command= the command runs first.  The advice then
-  gives the result to the name function and makes the group.  The
+- Without =:before-command= the command runs first. The advice then
+  gives the result to the name function and makes the group. The
   command has already shown its buffer at that time, and the buffer
-  is in the tab that was current.  The advice therefore saves the
+  is in the tab that was current. The advice therefore saves the
   window configuration, puts the old tab back, and carries the buffer
   into the new group.
 - With =:before-command= the advice makes the group first and calls
-  the name function with no argument.  The command then runs in the
+  the name function with no argument. The command then runs in the
   new group.
 
 The flag says when, not whether: a create rule never consults the
 command's result, so what =:before-command= decides is when the group
-is made and whether the name function is handed anything.  A close rule
+is made and whether the name function is handed anything. A close rule
 carries a flag of its own, =:always-close=, and that one does decide
 whether the result may call the closing off.
 
 ** The close advice
 
-The advice runs the command and closes the group after it.  It closes
+The advice runs the command and closes the group after it. It closes
 the group if the command returns a value, or in each case with
-=:always-close=.  The name function is asked for the name inside that
+=:always-close=. The name function is asked for the name inside that
 condition: a command that answered nil closes nothing, and a name
 function of the reader's has no business running for an answer nobody
 reads.
@@ -59,22 +59,22 @@ reads.
 * How the package finds a group
 
 =auto-tab-groups--find-tab-by-group-name= walks the tabs of the frame
-and returns the first tab with that group name.  The package uses
+and returns the first tab with that group name. The package uses
 this for three things: to switch to a group, to close a group, and to
 report whether a group is there.
 
 =auto-tab-groups--current-group= returns the group of the current
-tab.  The create advice needs it to put the old tab back.
+tab. The create advice needs it to put the old tab back.
 
 * The project mode
 
 =auto-tab-groups-project-mode= advises the commands that ask for a
 project with the create advice — =project-prompt-project-dir=,
 =project-prompt-project-name= and =project-switch-to-buffer= — and
-=project-kill-buffers= with the close advice.  It does that itself, so
+=project-kill-buffers= with the close advice. It does that itself, so
 the options of the package stay empty.
 
-=auto-tab-groups-project-group-name= makes the name.  It takes what
+=auto-tab-groups-project-group-name= makes the name. It takes what
 the command returned and finds the directory of the project:
 
 - a string that names a directory, or the root of a known project
@@ -88,11 +88,11 @@ project and not its root.
 Two commands need more than the name.
 
 =project-kill-buffers= kills the buffers of the project, and the
-directory is gone with them.  The advice of this package therefore
+directory is gone with them. The advice of this package therefore
 asks =project-current= for the root before the command runs and answers
 with the root afterwards, and only where a buffer really died: the
 command answers with the string of its own message where it finds none
-to kill, and the group went although nothing had.  The advice asks
+to kill, and the group went although nothing had. The advice asks
 without a prompt, because a prompt here would go through the advised
 =project-prompt-project-dir= and open a group for the answer to a
 question the command then asks again.
@@ -105,7 +105,7 @@ the name function answers nil for the commands in
 * The tests
 
 =make test= runs the batch suite in
-=test/auto-tab-groups-test.el=.  It calls the advice functions with a
+=test/auto-tab-groups-test.el=. It calls the advice functions with a
 stub in the place of the switch function, and it tests:
 
 - the group specification, in each of its three forms

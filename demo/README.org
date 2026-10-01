@@ -1,13 +1,13 @@
 #+TITLE: The recording
 
 This directory holds the script that makes the recording in the
-[[file:../README.org][README]].  It comes from a real Emacs session.
+[[file:../README.org][README]]. It comes from a real Emacs session.
 
 * The recording
 
-=img/demo.gif= comes from a scripted session.  =demo.el= drives the
+=img/demo.gif= comes from a scripted session. =demo.el= drives the
 session and writes one frame each tenth of a second with
-=x-export-frames=.  There is no screen recorder.
+=x-export-frames=. There is no screen recorder.
 
 #+begin_src shell
   Xvfb :99 -screen 0 1280x900x24 &        # if there is no display
@@ -18,10 +18,10 @@ The configuration in the recording is the minimal configuration of the
 README -- a group per project, and the mode -- with one rule for
 customize buffers and modern-tab-bar for the look, with the icons of
 the complete configuration from nerd-icons, under the modus-operandi
-theme.  A Nerd Font has to be installed for the icons to draw.  =demo.el= says so at its top; the rest of the
+theme. A Nerd Font has to be installed for the icons to draw. =demo.el= says so at its top; the rest of the
 file is the frame, the font and the steps of the session.
 
-Make the animation from the frames.  The final view is held for a
+Make the animation from the frames. The final view is held for a
 while, so the loop does not restart with a jump.
 
 #+begin_src shell
@@ -35,9 +35,9 @@ while, so the loop does not restart with a jump.
   gifsicle -O3 --lossy=80 raw.gif -o ../img/demo.gif
 #+end_src
 
-Do not resample the frame rate afterwards.  Dropping frames makes the
+Do not resample the frame rate afterwards. Dropping frames makes the
 motion uneven.
 
 The look of the bar in the recording is
-[[https://github.com/MArpogaus/modern-tabs][modern-tabs]], which =demo.el= configures.  The pictures of that
+[[https://github.com/MArpogaus/modern-tabs][modern-tabs]], which =demo.el= configures. The pictures of that
 bar belong to its own repository.

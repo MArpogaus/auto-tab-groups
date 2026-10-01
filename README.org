@@ -31,17 +31,17 @@
 
 ** About The Project
 
-This package puts your work into tab groups.  You give it a list of
-commands, and it creates a tab group when you call one of them.  It
+This package puts your work into tab groups. You give it a list of
+commands, and it creates a tab group when you call one of them. It
 closes a tab group when you call a command from a second list.
 
-The package is a thin layer on the tab bar of Emacs.  =tab-bar.el=
-does the work, and the [[https://www.gnu.org/software/emacs/manual/html_node/emacs/Tab-Bars.html][manual]] describes its commands.  The package
+The package is a thin layer on the tab bar of Emacs. =tab-bar.el=
+does the work, and the [[https://www.gnu.org/software/emacs/manual/html_node/emacs/Tab-Bars.html][manual]] describes its commands. The package
 leaves the tab bar settings, and the look of the bar, to you.
 
 The recording below shows the example configuration in this file at
-work.  Each project gets a tab group of its own.  A command can open
-a group of its own.  The group closes when you close the work.
+work. Each project gets a tab group of its own. A command can open
+a group of its own. The group closes when you close the work.
 
 [[file:img/demo.gif]]
 
@@ -51,7 +51,7 @@ a group of its own.  The group closes when you close the work.
 
 - Emacs 29.1 or later, with =tab-bar.el= and =project.el=.
 - [[https://github.com/rainstormstudio/nerd-icons.el][nerd-icons]] for the icons of [[https://github.com/MArpogaus/modern-tab][modern-tabs]], which draws the tab bar in
-  the pictures here.  That package is
+  the pictures here. That package is
   optional.
 
 *** Installation
@@ -91,11 +91,11 @@ The look in the picture above is [[https://github.com/MArpogaus/modern-tab][mode
 bar and the tab line and knows nothing about tab groups being made
 automatically.
 
-Switch to a project with =C-x p p=, and its tab group appears.  Kill
+Switch to a project with =C-x p p=, and its tab group appears. Kill
 the buffers of the project with =C-x p k=, and the group closes.
 
 Add the groups to
-=tab-bar-format=.  The tab bar then shows them:
+=tab-bar-format=. The tab bar then shows them:
 
 #+begin_src emacs-lisp
   (setq tab-bar-format '(tab-bar-format-tabs-groups
@@ -161,12 +161,12 @@ The icon on each group and the height of the tabs belong to
 The package keeps your tasks apart with the groups of the tab bar.
 
 A command in =auto-tab-groups-create-commands= makes a new group, or
-switches to the group if it is there.  A command in
+switches to the group if it is there. A command in
 =auto-tab-groups-close-commands= closes the group and each tab in it.
 
 The package has one command of its own,
-=auto-tab-groups-new-group=.  It makes a new group.  All other
-commands for tabs and groups come from =tab-bar.el=.  The package
+=auto-tab-groups-new-group=. It makes a new group. All other
+commands for tabs and groups come from =tab-bar.el=. The package
 stays small on purpose.
 
 ** Customization
@@ -200,11 +200,11 @@ Each entry of =auto-tab-groups-create-commands= and
   a plist with =:tab-group-name= and the flag of that kind of rule.
 
 For a create command the package runs the command first and gives the
-result to the name function.  With =:before-command= it makes the
+result to the name function. With =:before-command= it makes the
 group first, and calls the name function with no argument.
 
 For a close command the package closes the group if the command
-returns a value.  With =:always-close= it closes the group in each
+returns a value. With =:always-close= it closes the group in each
 case.
 
 The two flags carry different names because they decide different
@@ -215,26 +215,26 @@ the command's answer may call the closing off.
 *** auto-tab-groups-project
 
 This mode works together with =project.el=, in the way of
-[[https://github.com/fritzgrabo/project-tab-groups][project-tab-groups.el]].  Turn it on:
+[[https://github.com/fritzgrabo/project-tab-groups][project-tab-groups.el]]. Turn it on:
 
 #+begin_src emacs-lisp
   (auto-tab-groups-project-mode)
 #+end_src
 
-Each project then gets a tab group with the name of the project.  The
+Each project then gets a tab group with the name of the project. The
 package makes the group when you switch to the project.
 =project-kill-buffers= closes it.
 
-The name comes from =auto-tab-groups-project-group-name=.  You can
-also use this function in your own rules.  It takes what the command
-returned: a directory, a buffer or the name of a known project.  The
+The name comes from =auto-tab-groups-project-group-name=. You can
+also use this function in your own rules. It takes what the command
+returned: a directory, a buffer or the name of a known project. The
 mode has no options of its own.
 
 ** Comparison with Other Packages
 
 - [[https://github.com/mclear-tools/tabspaces][tabspaces]] uses the tab bar and =project.el= to make workspaces with
   their own buffers.
-- [[https://github.com/fritzgrabo/project-tab-groups][project-tab-groups]] manages tab groups for projects only.  Use it if
+- [[https://github.com/fritzgrabo/project-tab-groups][project-tab-groups]] manages tab groups for projects only. Use it if
   you want projects and nothing more.
 - [[https://github.com/alphapapa/activities.el][activities]] manages frames, tabs, windows and buffers by their
   purpose.
@@ -246,13 +246,13 @@ around your commands and the way the package finds a group.
 
 ** Contributions
 
-Contributions are greatly appreciated!  Feel free to check the
+Contributions are greatly appreciated! Feel free to check the
 [[https://github.com/MArpogaus/auto-tab-groups/issues][issues page]] or submit a [[https://github.com/MArpogaus/auto-tab-groups/pulls][pull request]].
 
 ** Use of LLM Coding Tools
 
 Parts of this package were written with the help of a large
-language model (LLM) coding assistant.  A person reviewed and tested
+language model (LLM) coding assistant. A person reviewed and tested
 every change before it was committed.
 
 ** License
