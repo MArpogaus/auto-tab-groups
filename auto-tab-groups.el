@@ -63,7 +63,8 @@ Each element should be a cons cell:
                 string.  The command runs first and its result is passed to
                 the function, unless `:before-command' is non-nil: then the
                 group is created before the command runs and the function is
-                called with no argument.
+                called with no argument.  When the command runs first and
+                returns a buffer, that buffer goes along into the group.
   - A plist: Provides additional options.  Currently supported properties:
     - `:tab-group-name': Group name (string) or a function returning a string.
     - `:before-command': If non-nil, the tab group is created before the
@@ -253,29 +254,18 @@ every later run of the command would switch to that tab."
 (defun auto-tab-groups--create-after (name-function orig-fun args)
   "Run ORIG-FUN on ARGS, then open the group NAME-FUNCTION names for it.
 The group name is only known once the command has run, and by then the
-command has shown whatever it produced in the tab that was current.
-That tab is left as it was and the buffer goes along to the group it
-belongs to."
-  (let* ((buffer (current-buffer))
-         (windows (current-window-configuration))
+command has shown whatever it produced in the tab that was current.  A
+buffer the command returns is what it showed: that tab is put back as
+it was and the buffer goes along to the group it belongs to.  A command
+that returns no buffer, such as one that only prompts, carries nothing."
+  (let* ((windows (current-window-configuration))
          (results (apply orig-fun args))
-         (shown (current-buffer))
          (name (funcall name-function results))
-         ;; A command that only prompts shows no buffer and the new tab
-         ;; stays as it is. Switching to the buffer that was current
-         ;; already changes nothing to compare, so a returned buffer,
-         ;; another current buffer, or a window layout that is not the
-         ;; one from before are the three signs of a buffer shown: a
-         ;; command that ends in `display-buffer' gives only the last.
-         (carry (and name
-                     (or (buffer-live-p results)
-                         (not (eq shown buffer))
-                         (not (window-configuration-equal-p
-                               windows (current-window-configuration))))
+         (carry (and name (buffer-live-p results)
                      (not (equal name (auto-tab-groups--current-group))))))
     (when carry (set-window-configuration windows))
     (auto-tab-groups--switch-or-create-tab-group name)
-    (when (and carry (buffer-live-p shown)) (switch-to-buffer shown))
+    (when carry (switch-to-buffer results))
     results))
 
 (defun auto-tab-groups--get-create-advice (tab-group-spec)

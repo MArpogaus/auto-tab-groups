@@ -207,6 +207,28 @@ carry is skipped."
           (should (eq (current-buffer) home)))
       (kill-buffer home))))
 
+(ert-deftest auto-tab-groups-test-create-advice-carries-no-prompt ()
+  "A command that only prompts carries nothing, even where the layout changed.
+A prompt can resize a window; the buffer that was current then went
+into the new group, where a display action made it a side window."
+  (let ((home (get-buffer-create "*auto-tab-groups-test home*"))
+        (elsewhere (get-buffer-create "*auto-tab-groups-test elsewhere*")))
+    (unwind-protect
+        (cl-letf (((symbol-function 'auto-tab-groups--switch-or-create-tab-group)
+                   (lambda (_name) (switch-to-buffer elsewhere)))
+                  ((symbol-function 'auto-tab-groups--current-group)
+                   (lambda () "the old one")))
+          (delete-other-windows)
+          (switch-to-buffer home)
+          (let ((advice (auto-tab-groups--get-create-advice
+                         (list :tab-group-name (lambda (&rest _) "the new one")))))
+            ;; the prompt changes the layout but shows no other buffer
+            (funcall advice (lambda () (split-window) "a/dir/")))
+          (should (eq (current-buffer) elsewhere)))
+      (delete-other-windows)
+      (kill-buffer home)
+      (kill-buffer elsewhere))))
+
 (ert-deftest auto-tab-groups-test-close-advice-answers-as-the-command-did ()
   "The close advice returns what the command returned.
 It stands in for the command everywhere, so a caller that uses the

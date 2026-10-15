@@ -34,9 +34,10 @@ The advice has two roads. =:before-command= chooses the road:
 - Without =:before-command= the command runs first. The advice then
   gives the result to the name function and makes the group. The
   command has already shown its buffer at that time, and the buffer
-  is in the tab that was current. The advice therefore saves the
-  window configuration, puts the old tab back, and carries the buffer
-  into the new group.
+  is in the tab that was current. When the command returns a buffer,
+  the advice therefore puts the old tab back and carries that buffer
+  into the new group. A command that returns no buffer, such as one
+  that only prompts, carries nothing.
 - With =:before-command= the advice makes the group first and calls
   the name function with no argument. The command then runs in the
   new group.
